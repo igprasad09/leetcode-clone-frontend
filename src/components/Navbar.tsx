@@ -1,8 +1,8 @@
-import { profileEmailAtom, profileImageAtom, submitionAtom } from "@/context";
+import { profileEmailAtom, submitionAtom } from "@/context";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
+import {useRecoilValue, useSetRecoilState } from "recoil";
 import { toast } from "sonner";
 
 type Props = {
@@ -19,7 +19,7 @@ export default function Navbar({ clock, programdet}: Props) {
             mi: 0,
             sec: 0
   });
-  const [profileImage, setProfileImage] = useRecoilState(profileImageAtom);
+ 
   const setProfileEmail = useSetRecoilState(profileEmailAtom);
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
@@ -69,13 +69,7 @@ export default function Navbar({ clock, programdet}: Props) {
  
   useEffect(() => {
   if (user) {
-    setProfileEmail(user.email ?? user.emails?.[0]?.value ?? "");
-    const photoUrl =
-      user.photos?.[0]?.value ??
-      user.picture ??        // Google OAuth style
-      user.photoURL ??       // Firebase style
-      "";
-    setProfileImage(photoUrl)
+    setProfileEmail(user.email ?? user.emails?.[0]?.value ?? "")
   }
 }, [user]);
 
@@ -86,7 +80,6 @@ function handle_logout(){
         axios.post("https://backend-nine-red-85.vercel.app/logout",{},{withCredentials: true}).then((res)=>{
             toast.success(res.data.message)
             setProfileEmail("")
-            setProfileImage("")
             setSubmitions([]);
       });
       }

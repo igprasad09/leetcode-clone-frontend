@@ -2,10 +2,10 @@ import axios from "axios";
 import {  useEffect, useState } from "react";
 import Navbar from "./Navbar";
 import { TypewriterEffect } from "./ui/typewriter-effect";
-import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
-import { allprogramNamesAtom, profileEmailAtom, profileImageAtom, submitionAtom, wordsAtom } from "@/context";
+import { useRecoilState, useRecoilValue } from "recoil";
+import { allprogramNamesAtom, profileEmailAtom, submitionAtom, wordsAtom } from "@/context";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+
 
 export default function Dashboard() {
   const navigate = useNavigate()
