@@ -173,7 +173,7 @@ export default function Rightside() {
 
   // All checks passed → send data
   try {
-    const res = await axios.post("http://localhost:3000/programs/submit", {
+    const res = await axios.post("https://backend-nine-red-85.vercel.app/programs/submit", {
       email,
       id: programInfo.id
     });
