@@ -100,9 +100,10 @@ export default function Rightside() {
   
   async function handle_code_execute() {
          setLoading(true)
-         const response = await axios.post("https://backend-nine-red-85.vercel.app/programs/programexicute", 
+         try{
+          const response = await axios.post("http://localhost:3000/programs/programexicute", 
              {email,code, language, testCases: programInfo.testCases, stdio: programInfo.stdio});
-         if(response.data.message){
+             if(response.data.message){
               setLoading(false);
               return toast.error(response.data.message);
          }
@@ -113,6 +114,12 @@ export default function Rightside() {
          }
          setLoading(false)
         setOutput(response.data.results);
+         }catch(err){
+             console.log(err)
+             setLoading(false)
+             toast.error("server Busy....")
+         }
+         
   }
 
   useEffect(() => {
@@ -187,8 +194,27 @@ export default function Rightside() {
 
 
  
-  // ✅ do conditional rendering AFTER hooks
-  if (!programInfo) return <div>Loading...</div>;
+      // ✅ do conditional rendering AFTER hooks
+      if (!programInfo) {
+      return (
+        <div className="h-screen bg-zinc-900 p-4 space-y-4">
+          {/* Top skeleton: editor */}
+          <div className="bg-zinc-800 animate-pulse rounded-md h-[60%] w-full"></div>
+
+          {/* Divider */}
+          <div className="bg-zinc-600 h-2 w-full rounded"></div>
+
+          {/* Bottom skeleton: testcases/output */}
+          <div className="bg-zinc-800 animate-pulse rounded-md h-[35%] w-full space-y-2 p-4">
+            <div className="h-6 bg-zinc-700 rounded w-32"></div> {/* Buttons skeleton */}
+            <div className="h-6 bg-zinc-700 rounded w-40"></div>
+            <div className="h-4 bg-zinc-700 rounded w-full mt-2"></div> {/* Input */}
+            <div className="h-4 bg-zinc-700 rounded w-full mt-1"></div>
+            <div className="h-4 bg-zinc-700 rounded w-full mt-1"></div>
+          </div>
+        </div>
+      );
+    }
   return (
     <div className="">
       <div className="bg-zinc-900 flex items-center justify-between text-black">
@@ -249,26 +275,26 @@ export default function Rightside() {
       <div ref={containerRef} className="h-screen flex flex-col">
         {/* Top Div */}
         <div
-  className="bg-neutral-800 overflow-auto z-0"
-  style={{ height: `${topHeight}px` }}
->
-  <Editor
-    height="100%" // ✅ fill parent
-    language={language === "python" ? "python" : "javascript"}
-    value={code}
-    theme="vs-dark"
-    onChange={(value) => setCode(value || "")}
-    options={{
-       fontSize: textSize
-    }}
-  />
-</div>
+          className="bg-neutral-800 overflow-auto z-0"
+          style={{ height: `${topHeight+90}px` }}
+        >
+          <Editor
+            height="100%" // ✅ fill parent
+            language={language === "python" ? "python" : "javascript"}
+            value={code}
+            theme="vs-dark"
+            onChange={(value) => setCode(value || "")}
+            options={{
+              fontSize: textSize
+            }}
+          />
+        </div>
 
 
         {/* Divider */}
         <div
           onMouseDown={handleMouseDown}
-          className="bg-zinc-600 hover:bg-gray-500 cursor-row-resize"
+          className="bg-zinc-600 hover:bg-gray-500  cursor-row-resize"
           style={{ height: `${dividerHeight}px` }}
         />
 
@@ -284,22 +310,22 @@ export default function Rightside() {
             <>
              <div className="flex">
                 {programInfo.testCases.map((_: string, index: number) => (
- <button
-  key={index}
-  onClick={() => handle_test(index)}
-  className={`cursor-pointer font-semibold px-3 ml-3 rounded-sm py-1 ${
-    result[index] === undefined
-      ? "bg-neutral-700" // fallback
-      : result[index]
-      ? "bg-green-500"
-      : "bg-red-500"
-  }`}
->
-  Case {index + 1}
-</button>
+            <button
+              key={index}
+              onClick={() => handle_test(index)}
+              className={`cursor-pointer font-semibold px-3 ml-3 rounded-sm py-1 ${
+                result[index] === undefined
+                  ? "bg-neutral-700" // fallback
+                  : result[index]
+                  ? "bg-green-500"
+                  : "bg-red-500"
+              }`}
+            >
+              Case {index + 1}
+            </button>
 
 
-))}
+            ))}
 
             </div>
             <p className="ml-4 mt-4 font-bold font-mono">Input:</p>
