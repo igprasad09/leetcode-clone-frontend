@@ -117,7 +117,7 @@ export default function Rightside() {
          }catch(err){
              console.log(err)
              setLoading(false)
-             toast.error("server Busy....")
+             toast.error("Login is required Or server is Busy....")
          }
          
   }
