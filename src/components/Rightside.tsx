@@ -308,6 +308,7 @@ export default function Rightside() {
                 <p className={`p-4 italic font-mono ${stdout != ""? "text-green-400":""} ${stderr != ""? "text-red-400":""}`}>{stdout == ""? <ErrorDisplay errorOutput={stderr}/> : stdout}</p>
             </div>:
             <>
+             <p className="pl-4 pr-7 pb-2 text-red-400">⚠️ Note: Sometimes, due to test case evaluation delays, your code may appear incorrect even if it’s actually right. Please rerun your code to verify — it may pass on the next run.</p>
              <div className="flex">
                 {programInfo.testCases.map((_: string, index: number) => (
             <button
