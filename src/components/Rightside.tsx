@@ -98,7 +98,7 @@ export default function Rightside() {
     }
   };
   
-  async function handle_code_execute() {
+ async function handle_code_execute() {
          setLoading(true)
          try{
           const response = await axios.post("https://backend-nine-red-85.vercel.app/programs/programexicute", 
@@ -296,7 +296,7 @@ export default function Rightside() {
           onMouseDown={handleMouseDown}
           className="bg-zinc-600 hover:bg-gray-500  cursor-row-resize"
           style={{ height: `${dividerHeight}px` }}
-        />
+        ></div>
 
         {/* Bottom Div */}
         <div className="bg-zinc-800 flex-1 overflow-auto">
@@ -308,8 +308,9 @@ export default function Rightside() {
                 <p className={`p-4 italic font-mono ${stdout != ""? "text-green-400":""} ${stderr != ""? "text-red-400":""}`}>{stdout == ""? <ErrorDisplay errorOutput={stderr}/> : stdout}</p>
             </div>:
             <>
-             <p className="pl-4 pr-7 pb-2 text-red-400">⚠️ Note: Sometimes, due to test case evaluation delays, your code may appear incorrect even if it’s actually right. Please rerun your code to verify — it may pass on the next run.</p>
+            <p className="pl-4 pr-7 pb-2 text-red-400">⚠️ Note: Sometimes, due to test case evaluation delays, your code may appear incorrect even if it’s actually right. Please rerun your code to verify — it may pass on the next run.</p>
              <div className="flex">
+              
                 {programInfo.testCases.map((_: string, index: number) => (
             <button
               key={index}

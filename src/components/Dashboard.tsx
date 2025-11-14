@@ -1,13 +1,21 @@
 import axios from "axios";
-import {  useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "./Navbar";
 import { TypewriterEffect } from "./ui/typewriter-effect";
-import { useRecoilState, useRecoilValue } from "recoil";
-import { allprogramNamesAtom, profileEmailAtom, submitionAtom, wordsAtom } from "@/context";
+import {
+  useRecoilState,
+  useRecoilValue
+} from "recoil";
+import {
+  allprogramNamesAtom,
+  profileEmailAtom,
+  submitionAtom,
+  wordsAtom,
+} from "@/context";
 import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   const words = useRecoilValue(wordsAtom);
   const email = useRecoilValue(profileEmailAtom);
   const [allprograms, setAllprograms] = useRecoilState(allprogramNamesAtom);
@@ -16,53 +24,66 @@ export default function Dashboard() {
   const [submitoins, setSubmitions] = useRecoilState(submitionAtom);
   const [loading, setLoading] = useState(true);
 
+  // 1. Fetch all programs
   useEffect(() => {
-      axios.get("https://backend-nine-red-85.vercel.app/programs")
-          .then((res)=>{
-               setAllprograms(res.data.programs);
-               setLoading(false)
-        }).finally(()=> setLoading(false));
-        
+    axios
+      .get("https://backend-nine-red-85.vercel.app/programs")
+      .then((res) => {
+        setAllprograms(res.data.programs);
+        // setLoading(false) is handled in .finally() to ensure it runs even on error
+      })
+      .finally(() => setLoading(false));
   }, []);
- 
-  useEffect(()=>{
-      axios.post("https://backend-nine-red-85.vercel.app/programs/allsubmitions",
-            {email}
-        ).then((res)=>{
-               setSubmitions(res.data.programId)
+
+  // 2. Fetch user submissions
+  useEffect(() => {
+    // Only fetch submissions if the email is available
+    if (email) {
+      axios
+        .post("https://backend-nine-red-85.vercel.app/programs/allsubmitions", {
+          email,
         })
-  },[email])
+        .then((res) => {
+          setSubmitions(res.data.programId);
+        });
+    }
+  }, [email, setSubmitions]); // Added setSubmitions to dependency array for completeness
 
-  useEffect(()=>{
-       console.log(submitoins)
-  },[submitoins])
-   
-  function handle_videoOpen(url: string){
-         let videoId = "";
+  // 3. Debug Submissions (Optional, but useful)
+  useEffect(() => {
+    // console.log("Current Submissions:", submitoins);
+  }, [submitoins]);
 
-  // If it's a normal YouTube link
-  if (url.includes("watch?v=")) {
-    videoId = url.split("watch?v=")[1].split("&")[0];
-  }
-  // If it's already youtu.be short link
-  else if (url.includes("youtu.be/")) {
-    videoId = url.split("youtu.be/")[1].split("?")[0];
+  // Handle Video Modal Open
+  function handle_videoOpen(url: string) {
+    let videoId = "";
+
+    // Extract video ID from different YouTube URL formats
+    if (url.includes("watch?v=")) {
+      videoId = url.split("watch?v=")[1].split("&")[0];
+    } else if (url.includes("youtu.be/")) {
+      videoId = url.split("youtu.be/")[1].split("?")[0];
+    }
+
+    const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+    setVideoUrl(embedUrl);
+    setOpenVideo(true);
   }
 
-  const embedUrl = `https://www.youtube.com/embed/${videoId}`;
-  setVideoUrl(embedUrl);
-  setOpenVideo(true);
+  // Handle Video Modal Close
+  function handleClose() {
+    setOpenVideo(false);
+    setVideoUrl("");
   }
-  function handleClose(){
-     setOpenVideo(false)
-     setVideoUrl("")
-  }
+
   return (
-    <div className="bg-zinc-900 text-white h-screen">
+    <div className="bg-zinc-900 text-white min-h-screen">
       <Navbar clock={false} />
 
-      <TypewriterEffect words={words} className="mt-10" />
+      {/* Title with typewriter effect */}
+      <TypewriterEffect words={words} className="mt-6 sm:mt-10" />
 
+      {/* Main container for the responsive table */}
       <div className="flex justify-center mt-10">
         <table className="w-full max-w-4xl border-collapse text-left text-sm">
           <thead className="text-gray-400 uppercase border-b border-gray-600">
