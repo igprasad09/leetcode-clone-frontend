@@ -15,7 +15,7 @@ function Leaderboard() {
       .get("https://backend-nine-red-85.vercel.app/api/allrank")
       .then((res) => setRanks(res.data.rank))
       .catch((err) => console.error(err));
-  }, []);
+  }, []); 
 
   useEffect(() => {
     console.log(ranks);
@@ -23,6 +23,7 @@ function Leaderboard() {
 
   return (
     <div>
+      
       <Navbar programdet={false} leaderboard={true} />
 
             {/* leaderboard ranking showing */}
