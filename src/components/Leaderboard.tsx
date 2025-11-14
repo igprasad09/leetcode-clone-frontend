@@ -23,7 +23,7 @@ function Leaderboard() {
 
   return (
     <div>
-      
+      {/* navabar section    */}
       <Navbar programdet={false} leaderboard={true} />
 
             {/* leaderboard ranking showing */}
