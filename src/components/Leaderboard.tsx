@@ -12,7 +12,7 @@ function Leaderboard() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3000/api/allrank")
+      .get("https://backend-nine-red-85.vercel.app/api/allrank")
       .then((res) => setRanks(res.data.rank))
       .catch((err) => console.error(err));
   }, []);
