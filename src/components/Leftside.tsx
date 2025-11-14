@@ -4,8 +4,44 @@ import { useRecoilValue } from "recoil"
 export default function Leftside() {
   const programInfo = useRecoilValue(programInfoAtom);
 
-  if(!programInfo){
-       return <div>Loading.....</div>
+  if (!programInfo) {
+    return (
+      <div className="text-white p-5 space-y-4">
+        {/* Title skeleton */}
+        <div className="h-6 w-1/3 bg-zinc-700 rounded animate-pulse"></div>
+
+        {/* Difficulty & buttons skeleton */}
+        <div className="flex space-x-4">
+          <div className="h-5 w-20 bg-zinc-700 rounded animate-pulse"></div>
+          <div className="h-5 w-12 bg-zinc-700 rounded animate-pulse"></div>
+          <div className="h-5 w-12 bg-zinc-700 rounded animate-pulse"></div>
+        </div>
+
+        {/* Description skeleton */}
+        <div className="h-4 w-full bg-zinc-700 rounded animate-pulse mt-2"></div>
+        <div className="h-4 w-5/6 bg-zinc-700 rounded animate-pulse mt-1"></div>
+        <div className="h-4 w-3/4 bg-zinc-700 rounded animate-pulse mt-1"></div>
+
+        {/* Example skeleton */}
+        {Array.from({ length: 2 }).map((_, idx) => (
+          <div key={idx} className="space-y-2 mt-4">
+            <div className="h-5 w-1/6 bg-zinc-700 rounded animate-pulse"></div>
+            <div className="space-y-1">
+              <div className="h-4 w-full bg-zinc-700 rounded animate-pulse"></div>
+              <div className="h-4 w-5/6 bg-zinc-700 rounded animate-pulse"></div>
+              <div className="h-4 w-4/6 bg-zinc-700 rounded animate-pulse"></div>
+            </div>
+          </div>
+        ))}
+
+        {/* Constraints skeleton */}
+        <div className="space-y-1 mt-4">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <div key={idx} className="h-4 w-2/6 bg-zinc-700 rounded animate-pulse"></div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (

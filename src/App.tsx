@@ -5,6 +5,7 @@ import Signup from "./components/Signup";
 import AuthLayout from "./components/AuthLayout";
 import { Toaster } from "sonner";
 import ProgramDetails from "./components/ProgramDetails";
+import Leaderboard from "./components/Leaderboard";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
               <Signup/>
             </AuthLayout>} />
             <Route path="/" element={<Navigate to={"/dashboard"}/>}/>
+            <Route path="/leaderboard" element={<Leaderboard/>}/>
             <Route path="/program/:id" element={<ProgramDetails/>}/>
         </Routes>
 

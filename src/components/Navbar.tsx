@@ -4,13 +4,15 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {useRecoilValue, useSetRecoilState } from "recoil";
 import { toast } from "sonner";
+import { Button } from "./ui/button";
 
 type Props = {
    log_out_click?: ()=>void,
    clock?: boolean,
-   programdet?: boolean
+   programdet?: boolean,
+   leaderboard?: boolean
 }
-export default function Navbar({ clock, programdet}: Props) {
+export default function Navbar({ clock, programdet, leaderboard}: Props) {
   const profileEmail = useRecoilValue(profileEmailAtom);
   const [hover, setHover] = useState(false);
   const [startTimer, setStartTimer] = useState(false);
@@ -84,6 +86,14 @@ function handle_logout(){
       });
       }
   }
+
+  function handle_show_your_rank(){
+        if(leaderboard){
+             navigate("/dashboard");
+        }else{
+            navigate("/leaderboard");
+        }
+  }
   
   return (
     <div className="bg-zinc-800 h-13 w-full flex justify-between items-center">
@@ -96,7 +106,7 @@ function handle_logout(){
       
       {/* we can change the program by clicking this button */}
 
-      {programdet && <div className="text-zinc-400 ml-25 flex justify-center items-center ">
+      {programdet ? <div className="text-zinc-400 ml-25 flex justify-center items-center ">
           <button onClick={()=>{
                if(!id) return;
                const num = parseInt(id);
@@ -112,12 +122,18 @@ function handle_logout(){
           <button onClick={() => {
                if(!id) return;
                const num = parseInt(id, 10); 
-               if(num >= 3) return toast("Nothing")
+               if(num >= 5) return toast("Nothing")
                navigate(`/program/${String(num+1)}`);
            }} className="bg-neutral-700 m-3 rounded-sm cursor-pointer">
                <svg fill="currentColor" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" id="right-arrow"><path d="M13.8 24.196a1 1 0 0 0 1.414 0L21.7 17.71a.992.992 0 0 0 .292-.71.997.997 0 0 0-.292-.71l-6.486-6.486a1 1 0 0 0-1.414 1.414L19.582 17 13.8 22.782a1 1 0 0 0 0 1.414z"></path></svg>
           </button>
-      </div>}
+      </div>
+       :
+      <Button onClick={handle_show_your_rank} className="bg-neutral-700 cursor-pointer text-orange-400 font-mono">
+                <span className="hidden sm:inline font-bold">{leaderboard ? "Home" : "Check Your Rank"}</span>
+                <span className="inline sm:hidden">{leaderboard ? "" : "Rank"}</span>
+              </Button>
+              }
 
       <div className="">
         <div className="flex justify-center items-center text-amber-500">
@@ -162,7 +178,7 @@ function handle_logout(){
           {/* Logout button (optional if you keep it in hover menu) */}
           <button
             onClick={handle_logout}
-            className="p-2 mr-4 rounded-sm bg-neutral-700"
+            className="p-2 mr-4 rounded-sm bg-neutral-700 cursor-pointer"
           >
             <img
               className="w-4"
