@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {useRecoilValue, useSetRecoilState } from "recoil";
 import { toast } from "sonner";
-import { Button } from "./ui/button";
+import TooltipButton from "./ui/TooltipButton";
+import Aboutbtn from "./ui/Aboutbtn";
 
 type Props = {
    log_out_click?: ()=>void,
@@ -97,10 +98,10 @@ function handle_logout(){
   
   return (
     <div className="bg-zinc-800 h-13 w-full flex justify-between items-center">
-      <div className="ml-4">
+      <div className="ml-4 cursor-pointer">
         <img
-          className="w-25"
-          src="https://res.cloudinary.com/dcazlekl5/image/upload/v1757174750/logo-full_vkvbhy.png"
+          className="w-35 mt-3 cursor-pointer"
+          src="/prepcodelogo.png"
         />
       </div>
       
@@ -129,17 +130,16 @@ function handle_logout(){
           </button>
       </div>
        :
-      <Button onClick={handle_show_your_rank} className="bg-neutral-700 cursor-pointer text-orange-400 font-mono">
-                <span className="hidden sm:inline font-bold">{leaderboard ? "Home" : "Check Your Rank"}</span>
-                <span className="inline sm:hidden">{leaderboard ? "" : "Rank"}</span>
-              </Button>
+      <TooltipButton onclick={handle_show_your_rank }/>
               }
-
+       
       <div className="">
         <div className="flex justify-center items-center text-amber-500">
           <button onClick={()=>navigate("/signup")} className="p-1 cursor-pointer mr-4 rounded-sm pl-3 pr-3 bg-neutral-700">
             Login
           </button>
+
+          <Aboutbtn/>
 
          {clock ? 
              startTimer ? <>
@@ -154,6 +154,7 @@ function handle_logout(){
             </>
          :<></> }
 
+        
          {/* Profile avatar with hover */}
           <div
             className="relative"

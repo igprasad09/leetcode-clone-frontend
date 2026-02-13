@@ -6,6 +6,8 @@ import AuthLayout from "./components/AuthLayout";
 import { Toaster } from "sonner";
 import ProgramDetails from "./components/ProgramDetails";
 import Leaderboard from "./components/Leaderboard";
+import ProfileDashboard from "./components/ProfileDashboard";
+import Contactus from "./components/Contactus";
 
 function App() {
   return (
@@ -24,6 +26,8 @@ function App() {
             <Route path="/" element={<Navigate to={"/dashboard"}/>}/>
             <Route path="/leaderboard" element={<Leaderboard/>}/>
             <Route path="/program/:id" element={<ProgramDetails/>}/>
+            <Route path="/profile" element={<ProfileDashboard/>}/>
+            <Route path="/contact" element={<Contactus/>}/>
         </Routes>
 
     </div>
