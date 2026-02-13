@@ -87,7 +87,7 @@ const words = [
       <p className="text-center -mt-6 text-md">Give Feedback👇</p>
             <PlaceholdersAndVanishInput
       placeholders={placeholders}
-      onChange={(e) => null}
+      onChange={() => null}
           onSubmit={(e) => {
         e.preventDefault();
 
