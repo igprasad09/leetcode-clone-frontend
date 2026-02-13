@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Navbar from "./Navbar";
 import axios from "axios";
+import { BackgroundLines } from "./ui/background-lines";
 
 interface Rank {
   email: string;
@@ -22,7 +23,8 @@ function Leaderboard() {
   }, [ranks]);
 
   return (
-    <div>
+     <BackgroundLines>
+        <div>
       {/* navabar section    */}
       <Navbar programdet={false} leaderboard={true} />
 
@@ -80,6 +82,7 @@ function Leaderboard() {
       </div>
 
     </div>
+     </BackgroundLines>
   );
 }
 
