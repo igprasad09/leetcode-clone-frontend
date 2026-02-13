@@ -13,7 +13,6 @@ import {
   wordsAtom,
 } from "@/context";
 import { useNavigate } from "react-router-dom";
-import { MultiStepLoader } from "./ui/multi-step-loader";
 
 export default function Dashboard() {
   const navigate = useNavigate();

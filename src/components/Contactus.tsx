@@ -4,7 +4,7 @@ import { BackgroundLines } from "./ui/background-lines";
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 import { LayoutTextFlip } from "@/components/ui/layout-text-flip";
 import { toast } from "sonner";
-import { useRecoilState } from "recoil";
+import { useRecoilValue } from "recoil";
 import { profileEmailAtom } from "@/context";
 import axios from "axios";
 import FeaturesSectionDemo from "./features-section-demo-3";
@@ -41,7 +41,7 @@ const words = [
   "Level Up Your Coding Skills"
 ];
 
-  const [email, setemail] = useRecoilState(profileEmailAtom);
+  const email = useRecoilValue(profileEmailAtom);
   const [allfeedbackdata, setallfeedbackdata] = useState([]);
   
   async function handle_feedbacks(email:string, feedback:string){
