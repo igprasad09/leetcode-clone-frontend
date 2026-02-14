@@ -11,6 +11,11 @@ import FeaturesSectionDemo from "./features-section-demo-3";
 import FeedbackList from "./ui/Feedbacktable";
 import { useEffect, useState } from "react";
 import { Button } from "./ui/stateful-button";
+import InstTooltip from "./ui/Instagram";
+import GitTooltip from "./ui/Github";
+import LinkdinTooltip from "./ui/Linkdin";
+import FackbookTooltip from "./ui/Facebook";
+import TwitterBtn from "./ui/TwitterBtn";
 
 export default function Contactus() {
     const testimonials = [
@@ -45,7 +50,7 @@ const words = [
   const [allfeedbackdata, setallfeedbackdata] = useState([]);
   
   async function handle_feedbacks(email:string, feedback:string){
-      await axios.post("http://backend-nine-red-85.vercel.app/programs/feedback", 
+      await axios.post("https://backend-nine-red-85.vercel.app/programs/feedback", 
             {email,
             feedback}
       ).then((res)=> console.log(res.data))
@@ -53,7 +58,7 @@ const words = [
 
   useEffect(()=>{
       async function fetchallfeedback(){
-           await axios.get("http://backend-nine-red-85.vercel.app/programs/allfeedbacks").then((res)=>{
+           await axios.get("https://backend-nine-red-85.vercel.app/programs/allfeedbacks").then((res)=>{
                     setallfeedbackdata(res.data.allfeedbacks)
            })
       }
@@ -62,7 +67,7 @@ const words = [
 
   const handleClick = () => {
     async function fetchallfeedback(){
-           await axios.get("http://backend-nine-red-85.vercel.app/programs/allfeedbacks").then((res)=>{
+           await axios.get("https://backend-nine-red-85.vercel.app/programs/allfeedbacks").then((res)=>{
                     setallfeedbackdata(res.data.allfeedbacks)
            })
       }
@@ -102,6 +107,16 @@ const words = [
         <FeaturesSectionDemo/>
          <div className="flex justify-center"><Button onClick={handleClick} children="Refresh Feedbacks"/></div>
          <FeedbackList feedbacks={allfeedbackdata}/>
+         <div className="flex justify-evenly mt-30">
+            <InstTooltip/> 
+            <GitTooltip/> 
+            <LinkdinTooltip/>
+            <FackbookTooltip/>
+            <TwitterBtn/>
+         </div>
+         <div className="h-30 w-full">
+
+         </div>
        </BackgroundLines> 
       
     </div>

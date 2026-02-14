@@ -55,7 +55,7 @@ export default function Signup() {
           if(response.data.message == "Invalid OTP"){
                toast.error(response.data.message);
           }else{
-             toast.success("otp sended successfully")
+             toast.success("otp sended successfully On Gmail")
           }
       }
     } else {
