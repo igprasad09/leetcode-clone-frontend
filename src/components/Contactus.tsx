@@ -45,7 +45,7 @@ const words = [
   const [allfeedbackdata, setallfeedbackdata] = useState([]);
   
   async function handle_feedbacks(email:string, feedback:string){
-      await axios.post("http://backend-nine-red-85.vercel.app/programs/feedback", 
+      await axios.post("https://backend-nine-red-85.vercel.app/programs/feedback", 
             {email,
             feedback}
       ).then((res)=> console.log(res.data))
@@ -53,7 +53,7 @@ const words = [
 
   useEffect(()=>{
       async function fetchallfeedback(){
-           await axios.get("http://backend-nine-red-85.vercel.app/programs/allfeedbacks").then((res)=>{
+           await axios.get("https://backend-nine-red-85.vercel.app/programs/allfeedbacks").then((res)=>{
                     setallfeedbackdata(res.data.allfeedbacks)
            })
       }
@@ -62,7 +62,7 @@ const words = [
 
   const handleClick = () => {
     async function fetchallfeedback(){
-           await axios.get("http://backend-nine-red-85.vercel.app/programs/allfeedbacks").then((res)=>{
+           await axios.get("https://backend-nine-red-85.vercel.app/programs/allfeedbacks").then((res)=>{
                     setallfeedbackdata(res.data.allfeedbacks)
            })
       }
