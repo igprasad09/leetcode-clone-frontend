@@ -133,7 +133,7 @@ function handle_logout(){
       <TooltipButton onclick={handle_show_your_rank }/>
               }
        
-      <div className="">
+      <div className="z-100">
         <div className="flex justify-center items-center text-amber-500">
           <button onClick={()=>navigate("/signup")} className="p-1 cursor-pointer mr-4 rounded-sm pl-3 pr-3 bg-neutral-700">
             Login
