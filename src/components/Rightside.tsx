@@ -107,8 +107,8 @@ export default function Rightside() {
               setLoading(false);
               return toast.error(response.data.message);
          }
-         setStdout(response.data?.results[0].output.run.stdout)
-         setStderr(response.data?.results[0].output.run.stderr)
+         setStdout(response.data?.results[0].output.stdout)
+         setStderr(response.data?.results[0].output.stderr)
          if(response.data){
             toast.info("check in outputs")
          }
@@ -124,32 +124,33 @@ export default function Rightside() {
 
   useEffect(() => {
   type TestCase = { expectedOutput: string };
-  type OutputItem = { output: { run: { stdout: string } } };
+  type OutputItem = { output: { stdout: string | null;};};
 
   const testcases = (programInfo?.testCases as TestCase[] | undefined)?.map(
     (element) => element.expectedOutput
   );
 
-  const exeOutputs = Array.isArray(output)
-    ? (output as OutputItem[]).map((element) => element.output.run.stdout)
-    : undefined;
+      const exeOutputs =
+      Array.isArray(output)
+        ? (output as OutputItem[]).map((element: OutputItem) => element.output.stdout)
+        : undefined;
 
-  const cleaned = exeOutputs?.map((item: string) => {
-    const stripped = item.trim();
-    return !isNaN(Number(stripped)) && stripped !== ''
-      ? Number(stripped)
-      : stripped;
-  });
-
-  if (testcases && cleaned) {
-    const newResult = cleaned.map((element, index) => {
-      return element == testcases[index];
+    const cleaned = exeOutputs?.map((item: string | null) => {
+      const stripped = (item || "").trim();
+      return !isNaN(Number(stripped)) && stripped !== ""
+        ? Number(stripped)
+        : stripped;
     });
-    setResult(newResult); // ✅ updates to boolean[]
-  } else {
-    // if no cleaned or no testcases → reset to empty array
-    setResult([]);
-  }
+
+      if (testcases && cleaned) {
+      const newResult = cleaned.map((element: string | number, index: number) => {
+        return element == testcases[index];
+      });
+
+      setResult(newResult);
+    } else {
+      setResult([]);
+    }
 }, [output, programInfo]);
    
   useEffect(()=>{
