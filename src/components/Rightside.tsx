@@ -26,7 +26,6 @@ export default function Rightside() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [topHeight, setTopHeight] = useState(200);
   const dividerHeight = 6;
-  const failAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     const startY = e.clientY;
@@ -217,16 +216,6 @@ export default function Rightside() {
         </div>
       );
     }
-
-    useEffect(() => {
-    failAudioRef.current = new Audio("/sounds/faaa.mp3");
-  }, []);
-  
-   useEffect(() => {
-  if (result.some((r) => r === false)) {
-    failAudioRef.current?.play();
-  }
-}, [result]);
 
   return (
     <div className="">
