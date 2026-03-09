@@ -26,6 +26,7 @@ export default function Rightside() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [topHeight, setTopHeight] = useState(200);
   const dividerHeight = 6;
+  const failAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     const startY = e.clientY;
@@ -109,9 +110,9 @@ export default function Rightside() {
          }
          setStdout(response.data?.results[0].output.stdout)
          setStderr(response.data?.results[0].output.stderr)
-         if(response.data){
-            toast.info("check in outputs")
-         }
+       if (response.data) {
+              toast.info("check in outputs");
+        }
          setLoading(false)
         setOutput(response.data.results);
          }catch(err){
@@ -216,6 +217,17 @@ export default function Rightside() {
         </div>
       );
     }
+
+    useEffect(() => {
+    failAudioRef.current = new Audio("/sounds/faaa.mp3");
+  }, []);
+  
+   useEffect(() => {
+  if (result.some((r) => r === false)) {
+    failAudioRef.current?.play();
+  }
+}, [result]);
+
   return (
     <div className="">
       <div className="bg-zinc-900 flex items-center justify-between text-black">
