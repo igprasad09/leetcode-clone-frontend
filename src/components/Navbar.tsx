@@ -98,7 +98,7 @@ function handle_logout(){
   
   return (
     <div className="bg-zinc-800 h-13 w-full flex justify-between items-center">
-      <div className="ml-4 cursor-pointer">
+      <div className="ml-4 z-20 cursor-pointer">
         <img
           className="w-35 mt-3 cursor-pointer"
           src="/prepcodelogo.png"
