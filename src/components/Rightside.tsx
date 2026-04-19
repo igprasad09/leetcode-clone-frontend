@@ -107,8 +107,11 @@ export default function Rightside() {
               setLoading(false);
               return toast.error(response.data.message);
          }
-         setStdout(response.data?.results[0].output.stdout)
-         setStderr(response.data?.results[0].output.stderr)
+         const res = response.data?.results[0].output;
+
+        setStdout(res.stdout);
+        setStderr(res.stderr || res.compile_output || res.message || "");
+           
        if (response.data) {
               toast.info("check in outputs");
         }
@@ -307,7 +310,17 @@ export default function Rightside() {
                <button onClick={()=>setOutputBtn(true)} className="bg-red-600 font-semibold px-3 py-1 rounded-sm hover:bg-red-500 cursor-pointer">Outputs</button>
             </div>
             {outputBtn?<div className="bg-black ">
-                <p className={`p-4 italic font-mono ${stdout != ""? "text-green-400":""} ${stderr != ""? "text-red-400":""}`}>{stdout == ""? <ErrorDisplay errorOutput={stderr}/> : stdout}</p>
+              <p className="p-4 italic font-mono">
+                    {stderr ? (
+                      <span className="text-red-400">
+                        <ErrorDisplay errorOutput={stderr} />
+                      </span>
+                    ) : (
+                      <span className="text-green-400">
+                        {stdout || "No Output"}
+                      </span>
+                    )}
+                  </p>
             </div>:
             <>
             <p className="pl-4 pr-7 pb-2 text-red-400">⚠️ Note: Sometimes, due to test case evaluation delays, your code may appear incorrect even if it’s actually right. Please rerun your code to verify — it may pass on the next run.</p>
