@@ -21,7 +21,7 @@ export default function Contactus() {
     const testimonials = [
    {
     quote: "Professor | Computer Science & Cybersecurity Expert | Academic Mentor | Project Guide",
-    name: "Professor Mantesh",
+    name: "Professor Mantesh Patil",
     designation: "Project Guide & Professor",
     src: "/user3.jpeg",
    },

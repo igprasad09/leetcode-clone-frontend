@@ -155,8 +155,8 @@ export default function Signup() {
             Sign Up
           </Button>
           <Button
-            onClick={() =>
-              (window.location.href = "https://backend-nine-red-85.vercel.app/google")
+            onClick={() => 
+              (window.location.href = "http://localhost:3000/google")
             }
             className="w-full cursor-pointer"
           >

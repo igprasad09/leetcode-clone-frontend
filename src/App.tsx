@@ -8,6 +8,9 @@ import ProgramDetails from "./components/ProgramDetails";
 import Leaderboard from "./components/Leaderboard";
 import ProfileDashboard from "./components/ProfileDashboard";
 import Contactus from "./components/Contactus";
+import Admin from "./components/Admin";
+import Contests from "./components/Contests";
+import ContestPrograms from "./components/ContestPrograms";
 
 function App() {
   return (
@@ -28,6 +31,9 @@ function App() {
             <Route path="/program/:id" element={<ProgramDetails/>}/>
             <Route path="/profile" element={<ProfileDashboard/>}/>
             <Route path="/contact" element={<Contactus/>}/>
+            <Route path="/admin" element={<Admin/>}/>
+            <Route path="/contests" element={<Contests/>}/>
+            <Route path="/contests/:id" element={<ContestPrograms/>}/>
         </Routes>
 
     </div>
