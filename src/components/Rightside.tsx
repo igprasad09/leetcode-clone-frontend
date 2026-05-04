@@ -15,17 +15,15 @@ export default function Rightside() {
   const textSize = useRecoilValue(textsizeAtom);
   const language = useRecoilValue(languageAtom);
   const [outputBtn, setOutputBtn] = useState(false);
-  const [stdout, setStdout] = useState(null);
+  const [stdout, setStdout] = useState<string | null>(null);
   const [stderr, setStderr] = useState("");
   const email = useRecoilValue(profileEmailAtom);
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useRecoilState(outputAtom);
   const [result, setResult] = useState<boolean[]>([]);
 
-  // ✅ always call hooks at top
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [topHeight, setTopHeight] = useState(200);
-  const dividerHeight = 6;
+  const [topHeight, setTopHeight] = useState(60);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     const startY = e.clientY;
@@ -33,8 +31,13 @@ export default function Rightside() {
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       if (!containerRef.current) return;
+      const totalHeight = containerRef.current.clientHeight;
       const offsetY = moveEvent.clientY - startY;
-      setTopHeight(startHeight + offsetY);
+      const newHeight = startHeight + (offsetY / totalHeight) * 100;
+      
+      if (newHeight > 20 && newHeight < 80) {
+        setTopHeight(newHeight);
+      }
     };
 
     const handleMouseUp = () => {
@@ -48,294 +51,262 @@ export default function Rightside() {
     document.body.style.cursor = "row-resize";
   };
 
-   useEffect(() => {
-  if (!programInfo) return;
+  useEffect(() => {
+    if (!programInfo) return;
+    if (language === "python") setCode(programInfo.starterCode.python);
+    else if (language === "c") setCode(programInfo.starterCode.cpp);
+    else setCode(programInfo.starterCode.javascript);
+  }, [language, programInfo]);
 
-  if (language === "python") {
-    setCode(programInfo.starterCode.python);
-  } else if (language === "c") {
-    setCode(programInfo.starterCode.cpp);
-  } else {
-    setCode(programInfo.starterCode.javascript);
-  }
-}, [language, programInfo]);
-  
-  function handle_test(index: number){
-       setTemp(index)
+  function handle_test(index: number) {
+    setTemp(index);
   }
 
- const toggleFullScreen = () => {
-    const doc = document as any; // for vendor-prefixed props
-    const docEl = document.documentElement as any;
+  async function handle_code_execute() {
+    if (!email || email.trim() === "") return toast.error("Login is required!");
+    setLoading(true);
 
-    // If already in fullscreen → exit
-    if (
-      doc.fullscreenElement ||
-      doc.mozFullScreenElement ||
-      doc.webkitFullscreenElement ||
-      doc.msFullscreenElement
-    ) {
-      if (doc.exitFullscreen) {
-        doc.exitFullscreen();
-      } else if (doc.mozCancelFullScreen) {
-        doc.mozCancelFullScreen();
-      } else if (doc.webkitExitFullscreen) {
-        doc.webkitExitFullscreen();
-      } else if (doc.msExitFullscreen) {
-        doc.msExitFullscreen();
+    const safeStdio = Array.isArray(programInfo.stdio) && programInfo.stdio.length > 0
+      ? programInfo.stdio
+      : programInfo.testCases.map(() => ({ python: "", javascript: "", c: "", java: "" }));
+
+    try {
+      const response = await axios.post("https://backend-nine-red-85.vercel.app/programs/programexicute", {
+        email, code, language, testCases: programInfo.testCases, stdio: safeStdio
+      });
+
+      if (response.data.message) {
+        setLoading(false);
+        return toast.error(response.data.message);
       }
-    } else {
-      // Not in fullscreen → request
-      if (docEl.requestFullscreen) {
-        docEl.requestFullscreen();
-      } else if (docEl.mozRequestFullScreen) {
-        docEl.mozRequestFullScreen();
-      } else if (docEl.webkitRequestFullscreen) {
-        docEl.webkitRequestFullscreen();
-      } else if (docEl.msRequestFullscreen) {
-        docEl.msRequestFullscreen();
-      }
+
+      setStdout(response.data?.results?.[0]?.output?.stdout || "");
+      setStderr(response.data?.results?.[0]?.output?.stderr || "");
+      
+      toast.info("Check outputs panel");
+      setLoading(false);
+      setOutput(response.data.results);
+      setOutputBtn(true);
+    } catch (err: any) {
+      console.error(err);
+      setLoading(false);
+      const backendErrorMessage = err.response?.data?.message || err.response?.data?.error || "Execution failed.";
+      toast.error(backendErrorMessage);
     }
-  };
-  
- async function handle_code_execute() {
-         setLoading(true)
-         try{
-          const response = await axios.post("https://backend-nine-red-85.vercel.app/programs/programexicute", 
-             {email,code, language, testCases: programInfo.testCases, stdio: programInfo.stdio});
-             if(response.data.message){
-              setLoading(false);
-              return toast.error(response.data.message);
-         }
-         setStdout(response.data?.results[0].output.run.stdout)
-         setStderr(response.data?.results[0].output.run.stderr)
-         if(response.data){
-            toast.info("check in outputs")
-         }
-         setLoading(false)
-        setOutput(response.data.results);
-         }catch(err){
-             console.log(err)
-             setLoading(false)
-             toast.error("Login is required Or server is Busy....")
-         }
-         
   }
 
   useEffect(() => {
-  type TestCase = { expectedOutput: string };
-  type OutputItem = { output: { run: { stdout: string } } };
+    type TestCase = { expectedOutput: string };
+    type OutputItem = { output: { stdout: string | null; }; };
 
-  const testcases = (programInfo?.testCases as TestCase[] | undefined)?.map(
-    (element) => element.expectedOutput
-  );
+    const testcases = (programInfo?.testCases as TestCase[] | undefined)?.map(el => el.expectedOutput);
+    const exeOutputs = Array.isArray(output) ? (output as OutputItem[]).map(el => el.output.stdout) : undefined;
 
-  const exeOutputs = Array.isArray(output)
-    ? (output as OutputItem[]).map((element) => element.output.run.stdout)
-    : undefined;
-
-  const cleaned = exeOutputs?.map((item: string) => {
-    const stripped = item.trim();
-    return !isNaN(Number(stripped)) && stripped !== ''
-      ? Number(stripped)
-      : stripped;
-  });
-
-  if (testcases && cleaned) {
-    const newResult = cleaned.map((element, index) => {
-      return element == testcases[index];
+    const cleaned = exeOutputs?.map((item: string | null) => {
+      const stripped = (item || "").trim();
+      return !isNaN(Number(stripped)) && stripped !== "" ? Number(stripped) : stripped;
     });
-    setResult(newResult); // ✅ updates to boolean[]
-  } else {
-    // if no cleaned or no testcases → reset to empty array
-    setResult([]);
-  }
-}, [output, programInfo]);
-   
-  useEffect(()=>{
-     console.log(result)
-  },[result])
+
+    if (testcases && cleaned) {
+      const newResult = cleaned.map((element: string | number, index: number) => element == testcases[index]);
+      setResult(newResult);
+    } else {
+      setResult([]);
+    }
+  }, [output, programInfo]);
 
   useEffect(() => {
-  if (programInfo) {
-    // reset to empty or undefined for new test cases
-    setResult(Array(programInfo.testCases.length).fill(undefined));
-  }
-}, [programInfo]);
- 
+    if (programInfo) setResult(Array(programInfo.testCases.length).fill(undefined));
+  }, [programInfo]);
+
   async function handle_submit() {
-  if (email === "") {
-    return toast.error("Email is required");
+    if (email === "") return toast.error("Email is required");
+    if (result.some(element => element === undefined)) return toast("First run the code");
+    if (result.some(element => element === false)) return toast.error("All cases need to pass");
+
+    try {
+      await axios.post("https://backend-nine-red-85.vercel.app/programs/submit", { email, id: programInfo.id });
+      toast.success("Submission successful");
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong");
+    }
   }
 
-  // Check if any element is undefined
-  if (result.some(element => element === undefined)) {
-    return toast("First run the code");
+  if (!programInfo) {
+    return (
+      <div className="h-full w-full space-y-2">
+        <div className="bg-zinc-900 rounded-lg h-[60%] w-full animate-pulse border border-zinc-800"></div>
+        <div className="bg-zinc-900 rounded-lg h-[40%] w-full animate-pulse border border-zinc-800"></div>
+      </div>
+    );
   }
 
-  // Check if any test case failed
-  if (result.some(element => element === false)) {
-    return toast.error("All cases need to pass");
-  }
-
-  // All checks passed → send data
-  try {
-    const res = await axios.post("https://backend-nine-red-85.vercel.app/programs/submit", {
-      email,
-      id: programInfo.id
-    });
-    console.log(res.data);
-    toast.success("Submission successful");
-  } catch (err) {
-    console.error(err);
-    toast.error("Something went wrong");
-  }
-}
-
-
- 
-      // ✅ do conditional rendering AFTER hooks
-      if (!programInfo) {
-      return (
-        <div className="h-screen bg-zinc-900 p-4 space-y-4">
-          {/* Top skeleton: editor */}
-          <div className="bg-zinc-800 animate-pulse rounded-md h-[60%] w-full"></div>
-
-          {/* Divider */}
-          <div className="bg-zinc-600 h-2 w-full rounded"></div>
-
-          {/* Bottom skeleton: testcases/output */}
-          <div className="bg-zinc-800 animate-pulse rounded-md h-[35%] w-full space-y-2 p-4">
-            <div className="h-6 bg-zinc-700 rounded w-32"></div> {/* Buttons skeleton */}
-            <div className="h-6 bg-zinc-700 rounded w-40"></div>
-            <div className="h-4 bg-zinc-700 rounded w-full mt-2"></div> {/* Input */}
-            <div className="h-4 bg-zinc-700 rounded w-full mt-1"></div>
-            <div className="h-4 bg-zinc-700 rounded w-full mt-1"></div>
+  return (
+    <div ref={containerRef} className="h-full flex flex-col w-full min-h-0">
+      <div 
+        className="bg-zinc-900 flex flex-col rounded-lg border border-zinc-800 overflow-hidden" 
+        style={{ height: `${topHeight}%` }}
+      >
+        <div className="bg-zinc-900 border-b border-zinc-800 p-1.5 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <CustomizedMenus />
+          </div>
+          <div className="flex items-center gap-3 pr-2">
+            <AlertDialogDemo>
+              <button className="text-zinc-400 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+            </AlertDialogDemo>
           </div>
         </div>
-      );
-    }
-  return (
-    <div className="">
-      <div className="bg-zinc-900 flex items-center justify-between text-black">
-         <div className="flex items-center">
-            <CustomizedMenus />
-         <button
-      onClick={handle_code_execute}
-      className="bg-neutral-800 cursor-pointer ml-3 p-1 rounded-sm flex items-center justify-center w-[40px] h-[40px]"
-    >
-      {loading ? (
-        // ⬇️ Loading Spinner SVG
-        <svg
-          className="animate-spin w-[24px] h-[24px] text-gray-300 dark:text-white"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-          />
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-          />
-        </svg>
-      ) : (
-        // ⬇️ Your original play SVG
-        <svg
-          className="w-[28px] h-[28px] text-gray-300 dark:text-white"
-          aria-hidden="true"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            fillRule="evenodd"
-            d="M8.6 5.2A1 1 0 0 0 7 6v12a1 1 0 0 0 1.6.8l8-6a1 1 0 0 0 0-1.6l-8-6Z"
-            clipRule="evenodd"
-          />
-        </svg>
-      )}
-    </button>
-        <button onClick={handle_submit} className="text-green-500 bg-neutral-800 p-1.5 ml-3 rounded-sm cursor-pointer flex font-semibold justify-center"><svg className="text-green-500 mr-1 w-[23px] h-[23px] dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v9m-5 0H5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1h-2M8 9l4-5 4 5m1 8h.01"/></svg>
-        Submit</button>
-         </div>
-         <div className="flex items-center">
-             <AlertDialogDemo><svg className="w-[23px] cursor-pointer h-[23px] text-neutral-400 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="square" strokeLinejoin="round" strokeWidth="2" d="M10 19H5a1 1 0 0 1-1-1v-1a3 3 0 0 1 3-3h2m10 1a3 3 0 0 1-3 3m3-3a3 3 0 0 0-3-3m3 3h1m-4 3a3 3 0 0 1-3-3m3 3v1m-3-4a3 3 0 0 1 3-3m-3 3h-1m4-3v-1m-2.121 1.879-.707-.707m5.656 5.656-.707-.707m-4.242 0-.707.707m5.656-5.656-.707.707M12 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg></AlertDialogDemo>
-             <svg onClick={toggleFullScreen} className="w-[23px] cursor-pointer ml-2 mr-2 h-[23px] text-gray-400 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M4 4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H4Zm16 7H4v7h16v-7ZM5 8a1 1 0 0 1 1-1h.01a1 1 0 0 1 0 2H6a1 1 0 0 1-1-1Zm4-1a1 1 0 0 0 0 2h.01a1 1 0 0 0 0-2H9Zm2 1a1 1 0 0 1 1-1h.01a1 1 0 1 1 0 2H12a1 1 0 0 1-1-1Z" clipRule="evenodd"/></svg>
-         </div>
-      </div>
 
-      <div ref={containerRef} className="h-screen flex flex-col">
-        {/* Top Div */}
-        <div
-          className="bg-neutral-800 overflow-auto z-0"
-          style={{ height: `${topHeight+90}px` }}
-        >
+        <div className="flex-1 min-h-0 pt-2">
           <Editor
-            height="100%" // ✅ fill parent
+            height="100%"
             language={language === "python" ? "python" : "javascript"}
             value={code}
             theme="vs-dark"
             onChange={(value) => setCode(value || "")}
-            options={{
-              fontSize: textSize
+            options={{ 
+              fontSize: textSize, 
+              minimap: { enabled: false }, 
+              padding: { top: 10 },
+              contextmenu: false, // Disables right-click in editor
+              copySelection: false, // Disables copying from editor
+              links: false, // Disables clickable links
+            }}
+            onMount={(editor) => {
+              // Block paste command specifically inside Monaco
+              editor.onKeyDown((e:any) => {
+                // 52 is the keyCode for 'V' in Monaco's internal event system
+                if ((e.ctrlKey || e.metaKey) && e.keyCode === 52) {
+                  e.preventDefault();
+                  toast.error("Pasting code is not allowed!");
+                }
+              });
             }}
           />
         </div>
+      </div>
 
+      <div
+        className="h-2 w-full cursor-row-resize flex justify-center items-center group shrink-0"
+        onMouseDown={handleMouseDown}
+      >
+        <div className="w-12 h-1 rounded-full bg-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+      </div>
 
-        {/* Divider */}
-        <div
-          onMouseDown={handleMouseDown}
-          className="bg-zinc-600 hover:bg-gray-500  cursor-row-resize"
-          style={{ height: `${dividerHeight}px` }}
-        ></div>
-
-        {/* Bottom Div */}
-        <div className="bg-zinc-800 flex-1 overflow-auto">
-            <div className="flex items-center ">
-               <h1 onClick={()=>setOutputBtn(false)} className=" underline cursor-pointer m-4 font-semibold">Testcases</h1>
-               <button onClick={()=>setOutputBtn(true)} className="bg-red-600 font-semibold px-3 py-1 rounded-sm hover:bg-red-500 cursor-pointer">Outputs</button>
-            </div>
-            {outputBtn?<div className="bg-black ">
-                <p className={`p-4 italic font-mono ${stdout != ""? "text-green-400":""} ${stderr != ""? "text-red-400":""}`}>{stdout == ""? <ErrorDisplay errorOutput={stderr}/> : stdout}</p>
-            </div>:
-            <>
-            <p className="pl-4 pr-7 pb-2 text-red-400">⚠️ Note: Sometimes, due to test case evaluation delays, your code may appear incorrect even if it’s actually right. Please rerun your code to verify — it may pass on the next run.</p>
-             <div className="flex">
-              
-                {programInfo.testCases.map((_: string, index: number) => (
-            <button
-              key={index}
-              onClick={() => handle_test(index)}
-              className={`cursor-pointer font-semibold px-3 ml-3 rounded-sm py-1 ${
-                result[index] === undefined
-                  ? "bg-neutral-700" // fallback
-                  : result[index]
-                  ? "bg-green-500"
-                  : "bg-red-500"
-              }`}
+      <div 
+        className="bg-zinc-900 rounded-lg border border-zinc-800 flex flex-col overflow-hidden"
+        style={{ height: `calc(${100 - topHeight}% - 8px)` }}
+      >
+        <div className="bg-zinc-900 border-b border-zinc-800 px-4 py-2 flex items-center justify-between shrink-0">
+          <div className="flex gap-4">
+            <button 
+              onClick={() => setOutputBtn(false)} 
+              className={`text-sm font-medium flex items-center gap-1.5 transition-colors ${!outputBtn ? "text-white" : "text-zinc-400 hover:text-white"}`}
             >
-              Case {index + 1}
+              <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+              Testcases
             </button>
+            <button 
+              onClick={() => setOutputBtn(true)} 
+              className={`text-sm font-medium flex items-center gap-1.5 transition-colors ${outputBtn ? "text-white" : "text-zinc-400 hover:text-white"}`}
+            >
+              <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm11 1H6v8l4-2 4 2V6z" clipRule="evenodd" /></svg>
+              Test Result
+            </button>
+          </div>
 
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handle_code_execute}
+              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors rounded px-4 py-1.5 text-sm font-semibold flex items-center gap-1.5"
+            >
+              {loading ? (
+                <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                </svg>
+              ) : (
+                <svg className="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M8.6 5.2A1 1 0 0 0 7 6v12a1 1 0 0 0 1.6.8l8-6a1 1 0 0 0 0-1.6l-8-6Z" clipRule="evenodd"/></svg>
+              )}
+              Run
+            </button>
+            <button 
+              onClick={handle_submit} 
+              className="bg-zinc-800 hover:bg-green-500/10 text-green-500 transition-colors rounded px-4 py-1.5 text-sm font-semibold flex items-center gap-1.5"
+            >
+              <svg className="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v9m-5 0H5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1h-2M8 9l4-5 4 5m1 8h.01"/></svg>
+              Submit
+            </button>
+          </div>
+        </div>
 
-            ))}
-
+        <div className="flex-1 overflow-auto p-4 bg-zinc-900">
+          {outputBtn ? (
+            <div className="font-mono text-sm space-y-2">
+              <p className={`p-4 rounded-lg bg-zinc-950 border border-zinc-800 ${stdout ? "text-zinc-300" : ""} ${stderr ? "text-red-400" : ""}`}>
+                {stdout === "" ? <ErrorDisplay errorOutput={stderr} /> : stdout}
+                {!stdout && !stderr && <span className="text-zinc-500 italic">Run code to see output here.</span>}
+              </p>
             </div>
-            <p className="ml-4 mt-4 font-bold font-mono">Input:</p>
-            <div className="ml-4 bg-neutral-700 rounded-sm mr-4 p-2 font-semibold">{programInfo.testCases[temp].input}</div>
-            <p className="ml-4 mt-4 font-semibold font-mono">Expected Output:</p>
-            <div className="ml-4 bg-neutral-700 rounded-sm mr-4 p-2 font-semibold">{programInfo.testCases[temp].expectedOutput}</div>
-            </>}
-            
+          ) : (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {programInfo.testCases.map((_: string, index: number) => {
+                  const isSelected = temp === index;
+                  const isPassed = result[index] === true;
+                  const isFailed = result[index] === false;
+
+                  let btnClass = "cursor-pointer font-semibold text-sm px-4 py-1.5 rounded-lg transition-all duration-200 ";
+
+                  if (isPassed) {
+                    btnClass += isSelected 
+                      ? "bg-green-500/20 text-green-400" 
+                      : "bg-green-500/5 text-green-500 opacity-60 hover:opacity-100 hover:bg-green-500/10";
+                  } else if (isFailed) {
+                    btnClass += isSelected 
+                      ? "bg-red-500/20 text-red-400" 
+                      : "bg-red-500/5 text-red-500 opacity-60 hover:opacity-100 hover:bg-red-500/10";
+                  } else {
+                    btnClass += isSelected 
+                      ? "bg-zinc-700 text-white" 
+                      : "bg-zinc-950 text-zinc-400 hover:bg-zinc-800";
+                  }
+
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => handle_test(index)}
+                      className={btnClass}
+                    >
+                      Case {index + 1}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-4 pt-2">
+                <div>
+                  <p className="text-xs font-semibold text-zinc-400 mb-1.5 ml-1">Input</p>
+                  <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 font-mono text-sm text-zinc-300">
+                    {programInfo.testCases[temp].input}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-zinc-400 mb-1.5 ml-1">Expected Output</p>
+                  <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 font-mono text-sm text-zinc-300">
+                    {programInfo.testCases[temp].expectedOutput}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

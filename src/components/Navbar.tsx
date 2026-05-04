@@ -98,10 +98,11 @@ function handle_logout(){
   
   return (
     <div className="bg-zinc-800 h-13 w-full flex justify-between items-center">
-      <div className="ml-4 cursor-pointer">
+      <div className="ml-4 cursor-pointer z-100">
         <img
           className="w-35 mt-3 cursor-pointer"
           src="/prepcodelogo.png"
+          onClick={()=>navigate("/dashboard")}
         />
       </div>
       
@@ -123,7 +124,7 @@ function handle_logout(){
           <button onClick={() => {
                if(!id) return;
                const num = parseInt(id, 10); 
-               if(num >= 5) return toast("Nothing")
+               if(num >= 6) return toast("Nothing")
                navigate(`/program/${String(num+1)}`);
            }} className="bg-neutral-700 m-3 rounded-sm cursor-pointer">
                <svg fill="currentColor" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" id="right-arrow"><path d="M13.8 24.196a1 1 0 0 0 1.414 0L21.7 17.71a.992.992 0 0 0 .292-.71.997.997 0 0 0-.292-.71l-6.486-6.486a1 1 0 0 0-1.414 1.414L19.582 17 13.8 22.782a1 1 0 0 0 0 1.414z"></path></svg>
@@ -133,10 +134,28 @@ function handle_logout(){
       <TooltipButton onclick={handle_show_your_rank }/>
               }
        
-      <div className="">
+      <div className="z-1">
         <div className="flex justify-center items-center text-amber-500">
+
+          {/* admin Button visiable */}
+          {profileEmail == "vivek87228@gmail.com" &&
+            <button onClick={()=>navigate("/admin")} className="p-1 cursor-pointer mr-4 rounded-sm pl-3 pr-3 bg-neutral-700">
+            Admin
+          </button>
+          }
+
           <button onClick={()=>navigate("/signup")} className="p-1 cursor-pointer mr-4 rounded-sm pl-3 pr-3 bg-neutral-700">
             Login
+          </button>
+
+          <button onClick={()=>{
+              if(profileEmail){
+                 navigate("/contests");
+              }else{
+                 toast.error("Login is Require Bro......")
+              }
+          }} className="p-1 cursor-pointer mr-4 rounded-sm pl-3 pr-3 bg-neutral-700">
+            Contests
           </button>
 
           <Aboutbtn/>

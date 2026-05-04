@@ -22,7 +22,7 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({onclick}) => {
       </span>
 
       {/* Main Text */}
-      <span className="absolute inset-0 grid place-items-center transition-all duration-400 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-0 group-hover:left-full">
+      <span className="absolute text-white inset-0 grid place-items-center transition-all duration-400 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-0 group-hover:left-full">
         Rank 👑
       </span>
 
