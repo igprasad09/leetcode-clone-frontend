@@ -9,9 +9,10 @@ export default function SecurityMonitor() {
   
   const [objectDetector, setObjectDetector] = useState<ObjectDetector | null>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
+  const [isAiLoaded, setIsAiLoaded] = useState(false);
   const hasViolated = useRef(false);
 
-  // 1. Load Only the Object Detector (Lightning Fast)
+  // 1. Initialize AI with error handling to prevent black screen hang
   useEffect(() => {
     const initializeModel = async () => {
       try {
@@ -22,46 +23,43 @@ export default function SecurityMonitor() {
         const detector = await ObjectDetector.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath: "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite",
-            delegate: "GPU" // Uses the graphics card for zero lag
+            delegate: "GPU" 
           },
-          scoreThreshold: 0.55, // 55% confidence required to trigger
+          scoreThreshold: 0.5,
           runningMode: "VIDEO"
         });
         
         setObjectDetector(detector);
-        console.log("Ultra-Fast Phone Detector Loaded");
+        setIsAiLoaded(true);
       } catch (err) {
-        console.error("Failed to load model", err);
+        console.error("AI Initialization Failed:", err);
+        toast.error("Failed to start security proctor. Please check connection.");
       }
     };
     initializeModel();
   }, []);
 
-  // 2. Setup Low-Res Camera
+  // 2. Setup Camera
   useEffect(() => {
     let activeStream: MediaStream | null = null;
 
     async function setupCamera() {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: 320, height: 240 }, // Low res = fast processing
-            audio: false,
-          });
-          activeStream = stream; 
-          
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            setIsCameraReady(true);
-          }
-        } catch (err) {
-          toast.error("Camera access is required for proctoring.");
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 320, height: 240 },
+          audio: false,
+        });
+        activeStream = stream; 
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          setIsCameraReady(true);
         }
+      } catch (err) {
+        toast.error("Camera access denied.");
       }
     }
     setupCamera();
 
-    // Turn off the camera when this component is destroyed
     return () => {
       if (activeStream) {
         activeStream.getTracks().forEach(track => track.stop());
@@ -69,7 +67,7 @@ export default function SecurityMonitor() {
     };
   }, []);
 
-  // 3. High-Speed Detection Loop
+  // 3. Optimized detection loop
   useEffect(() => {
     if (!objectDetector || !isCameraReady || !videoRef.current) return;
 
@@ -80,7 +78,6 @@ export default function SecurityMonitor() {
     const predict = () => {
       if (hasViolated.current) return;
 
-      // Only run math if the video actually produced a new frame
       if (video.currentTime !== lastVideoTime) {
         lastVideoTime = video.currentTime;
         const startTimeMs = performance.now();
@@ -92,51 +89,45 @@ export default function SecurityMonitor() {
 
         if (phoneDetected) {
           hasViolated.current = true;
-          toast.error("Mobile device detected! Session terminated.");
+          toast.error("Security Violation: Mobile device detected!");
           
-          // 1. Exit Fullscreen
           if (document.fullscreenElement) {
             document.exitFullscreen().catch(() => {});
           }
           
-          // 2. Turn off the camera instantly
-          if (videoRef.current && videoRef.current.srcObject) {
-            const stream = videoRef.current.srcObject as MediaStream;
-            stream.getTracks().forEach(track => track.stop());
+          if (video.srcObject) {
+            (video.srcObject as MediaStream).getTracks().forEach(t => t.stop());
           }
 
-          // 3. Kick to dashboard
-          setTimeout(() => {
-            navigate("/dashboard");
-          }, 100);
-          
-          return; // Stop the loop forever
+          setTimeout(() => navigate("/dashboard"), 100);
+          return; 
         }
       }
-      
-      // Keep looping smoothly with the browser's refresh rate
       animationFrameId = requestAnimationFrame(predict);
     };
 
     predict();
-
     return () => cancelAnimationFrame(animationFrameId);
   }, [objectDetector, isCameraReady, navigate]);
 
+  // Show nothing while loading to prevent the "Black Screen" hang
+  if (!isAiLoaded) return null;
+
   return (
     <div className="fixed bottom-4 right-4 z-[200]">
-      <div className="relative group">
-        <video
-          ref={videoRef}
-          autoPlay
-          muted
-          playsInline
-          className="w-24 h-24 rounded-lg border-2 border-zinc-800 bg-black object-cover opacity-20 group-hover:opacity-100 transition-opacity"
-        />
-        <div className="absolute top-1 left-1 flex items-center gap-1">
-          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-          <span className="text-[10px] font-bold text-white uppercase shadow-black drop-shadow-md">Proctor</span>
-        </div>
+      {/* Invisible video element that still performs detection */}
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        playsInline
+        style={{ width: '1px', height: '1px', opacity: 0.01 }} 
+      />
+      
+      {/* Optional: Simple "Live" indicator so user knows they are protected */}
+      <div className="bg-zinc-900/80 border border-zinc-800 p-2 rounded-lg flex items-center gap-2">
+        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+        <span className="text-[10px] font-bold text-zinc-400 uppercase">AI Protected</span>
       </div>
     </div>
   );
