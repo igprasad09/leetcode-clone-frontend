@@ -180,12 +180,17 @@ export default function Rightside() {
               links: false, // Disables clickable links
             }}
             onMount={(editor) => {
-              // Block paste command specifically inside Monaco
               editor.onKeyDown((e:any) => {
-                // 52 is the keyCode for 'V' in Monaco's internal event system
+                // 52 is the keyCode for 'V' in Monaco's internal event system (Block Paste)
                 if ((e.ctrlKey || e.metaKey) && e.keyCode === 52) {
                   e.preventDefault();
                   toast.error("Pasting code is not allowed!");
+                }
+                
+                // 33 is the keyCode for 'C' in Monaco's internal event system (Block Copy)
+                if ((e.ctrlKey || e.metaKey) && e.keyCode === 33) {
+                  e.preventDefault();
+                  toast.error("Copying code is not allowed!");
                 }
               });
             }}
