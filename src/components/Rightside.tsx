@@ -176,7 +176,6 @@ export default function Rightside() {
               minimap: { enabled: false }, 
               padding: { top: 10 },
               contextmenu: false, // Disables right-click in editor
-              copySelection : false, // Disables copying from editor
               links: false, // Disables clickable links
             }}
             onMount={(editor) => {
