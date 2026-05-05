@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ObjectDetector, FilesetResolver } from "@mediapipe/tasks-vision";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
