@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { ObjectDetector, FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
+import React, { useEffect, useRef, useState } from "react";
+import { ObjectDetector, FilesetResolver } from "@mediapipe/tasks-vision";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -8,53 +8,36 @@ export default function SecurityMonitor() {
   const navigate = useNavigate();
   
   const [objectDetector, setObjectDetector] = useState<ObjectDetector | null>(null);
-  const [faceLandmarker, setFaceLandmarker] = useState<FaceLandmarker | null>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
-  
-  const hasViolated = useRef(false); 
-  const missingStrikes = useRef(0);
-  const lastStrikeTime = useRef(0);
+  const hasViolated = useRef(false);
 
-  // 1. Load Only Essential, High-Speed Models
+  // 1. Load Only the Object Detector (Lightning Fast)
   useEffect(() => {
-    const initializeModels = async () => {
+    const initializeModel = async () => {
       try {
         const vision = await FilesetResolver.forVisionTasks(
           "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
         );
 
-        // Object Detector (Mobile Phones)
-        const objDetector = await ObjectDetector.createFromOptions(vision, {
+        const detector = await ObjectDetector.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath: "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite",
-            delegate: "GPU" // Force hardware acceleration
+            delegate: "GPU" // Uses the graphics card for zero lag
           },
-          scoreThreshold: 0.5,
+          scoreThreshold: 0.55, // 55% confidence required to trigger
           runningMode: "VIDEO"
         });
-        setObjectDetector(objDetector);
-
-        // Basic Face Detector (Count faces, no heavy 3D tracking)
-        const faceDetector = await FaceLandmarker.createFromOptions(vision, {
-          baseOptions: {
-            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-            delegate: "GPU"
-          },
-          runningMode: "VIDEO",
-          numFaces: 2, // Only need to know if there's 1 or 2+ faces
-          // outputFacialBlendshapes removed to fix TS2561 error and optimize performance
-        });
-        setFaceLandmarker(faceDetector);
         
-        console.log("Optimized Security Models Loaded");
+        setObjectDetector(detector);
+        console.log("Ultra-Fast Phone Detector Loaded");
       } catch (err) {
-        console.error("Failed to load models", err);
+        console.error("Failed to load model", err);
       }
     };
-    initializeModels();
+    initializeModel();
   }, []);
 
-  // 2. Setup Low-Resolution Camera (Faster Processing)
+  // 2. Setup Low-Res Camera
   useEffect(() => {
     let activeStream: MediaStream | null = null;
 
@@ -62,7 +45,7 @@ export default function SecurityMonitor() {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: 320, height: 240 }, // Keeps CPU load very low
+            video: { width: 320, height: 240 }, // Low res = fast processing
             audio: false,
           });
           activeStream = stream; 
@@ -78,6 +61,7 @@ export default function SecurityMonitor() {
     }
     setupCamera();
 
+    // Turn off the camera when this component is destroyed
     return () => {
       if (activeStream) {
         activeStream.getTracks().forEach(track => track.stop());
@@ -85,95 +69,59 @@ export default function SecurityMonitor() {
     };
   }, []);
 
-  // 3. High-Speed, Lightweight Detection Loop
+  // 3. High-Speed Detection Loop
   useEffect(() => {
-    if (!objectDetector || !faceLandmarker || !isCameraReady || !videoRef.current) return;
+    if (!objectDetector || !isCameraReady || !videoRef.current) return;
 
     const video = videoRef.current;
     let animationFrameId: number;
     let lastVideoTime = -1;
 
-    const predict = async () => {
+    const predict = () => {
       if (hasViolated.current) return;
 
+      // Only run math if the video actually produced a new frame
       if (video.currentTime !== lastVideoTime) {
         lastVideoTime = video.currentTime;
         const startTimeMs = performance.now();
 
-        // --- RULE 1: NO PHONES ---
-        const objResults = objectDetector.detectForVideo(video, startTimeMs);
-        const phoneDetected = objResults.detections.find(d => d.categories[0].categoryName === "cell phone");
-        
+        const results = objectDetector.detectForVideo(video, startTimeMs);
+        const phoneDetected = results.detections.find(
+          d => d.categories[0].categoryName === "cell phone"
+        );
+
         if (phoneDetected) {
-          triggerTermination("Mobile device detected!");
-          return;
-        }
-
-        // --- FACE TRACKING RULES ---
-        const faceResults = faceLandmarker.detectForVideo(video, startTimeMs);
-        const faceCount = faceResults.faceLandmarks ? faceResults.faceLandmarks.length : 0;
-
-        // RULE 2: NO FRIENDS (Multiple People)
-        if (faceCount > 1) {
-          triggerTermination("Multiple people detected in the frame!");
-          return;
-        }
-
-        // RULE 3: STAY IN YOUR SEAT (Face Missing)
-        if (faceCount === 0) {
-          const now = Date.now();
-          if (now - lastStrikeTime.current > 5000) { // 5-second grace period
-            missingStrikes.current += 1;
-            lastStrikeTime.current = now;
-
-            if (missingStrikes.current === 1) {
-              toast.warning("Warning 1: Face not detected! Please stay in your seat.");
-            } else if (missingStrikes.current === 2) {
-              toast.warning("Warning 2: Please return to the frame. Final warning.");
-            } else if (missingStrikes.current >= 3) {
-              triggerTermination("Exam Terminated: User left the testing area.");
-              return;
-            }
+          hasViolated.current = true;
+          toast.error("Mobile device detected! Session terminated.");
+          
+          // 1. Exit Fullscreen
+          if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => {});
           }
-        } else {
-          // Reset strikes if they are sitting normally in frame for a while
-          // (Optional: You can remove this if you want strikes to be permanent)
-          if (Date.now() - lastStrikeTime.current > 10000) {
-             missingStrikes.current = 0;
+          
+          // 2. Turn off the camera instantly
+          if (videoRef.current && videoRef.current.srcObject) {
+            const stream = videoRef.current.srcObject as MediaStream;
+            stream.getTracks().forEach(track => track.stop());
           }
+
+          // 3. Kick to dashboard
+          setTimeout(() => {
+            navigate("/dashboard");
+          }, 100);
+          
+          return; // Stop the loop forever
         }
       }
       
-      // Syncs perfectly with the browser's refresh rate
+      // Keep looping smoothly with the browser's refresh rate
       animationFrameId = requestAnimationFrame(predict);
     };
 
     predict();
 
     return () => cancelAnimationFrame(animationFrameId);
-  }, [objectDetector, faceLandmarker, isCameraReady, navigate]);
-
-  // --- TERMINATION HANDLER ---
-  const triggerTermination = (message: string) => {
-    hasViolated.current = true;
-    toast.error(message);
-    
-    // Exit Fullscreen
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
-    }
-    
-    // Kill Camera hardware
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-    }
-
-    // Instant Redirect
-    setTimeout(() => {
-      navigate("/dashboard");
-    }, 100);
-  };
+  }, [objectDetector, isCameraReady, navigate]);
 
   return (
     <div className="fixed bottom-4 right-4 z-[200]">
