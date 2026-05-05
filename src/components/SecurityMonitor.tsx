@@ -1,102 +1,179 @@
-import  { useEffect, useRef, useState } from "react";
-import * as tf from "@tensorflow/tfjs";
-import * as cocoSsd from "@tensorflow-models/coco-ssd";
+import { useEffect, useRef, useState } from "react";
+import { ObjectDetector, FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 export default function SecurityMonitor() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const navigate = useNavigate();
-  const [model, setModel] = useState<cocoSsd.ObjectDetection | null>(null);
+  
+  const [objectDetector, setObjectDetector] = useState<ObjectDetector | null>(null);
+  const [faceLandmarker, setFaceLandmarker] = useState<FaceLandmarker | null>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
   
   const hasViolated = useRef(false); 
+  const missingStrikes = useRef(0);
+  const lastStrikeTime = useRef(0);
 
-  // 1. Load the AI Model
+  // 1. Load Only Essential, High-Speed Models
   useEffect(() => {
-    const loadModel = async () => {
+    const initializeModels = async () => {
       try {
-        await tf.setBackend('webgl').catch(() => console.log("WebGL not supported, falling back to CPU"));
-        await tf.ready();
+        const vision = await FilesetResolver.forVisionTasks(
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+        );
+
+        // Object Detector (Mobile Phones)
+        const objDetector = await ObjectDetector.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite",
+            delegate: "GPU" // Force hardware acceleration
+          },
+          scoreThreshold: 0.5,
+          runningMode: "VIDEO"
+        });
+        setObjectDetector(objDetector);
+
+        // Basic Face Detector (Count faces, no heavy 3D tracking)
+        const faceDetector = await FaceLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+            delegate: "GPU"
+          },
+          runningMode: "VIDEO",
+          numFaces: 2, // Only need to know if there's 1 or 2+ faces
+          // outputFacialBlendshapes removed to fix TS2561 error and optimize performance
+        });
+        setFaceLandmarker(faceDetector);
         
-        const loadedModel = await cocoSsd.load();
-        setModel(loadedModel);
-        console.log("AI Model Loaded");
+        console.log("Optimized Security Models Loaded");
       } catch (err) {
-        console.error("Failed to load AI model", err);
+        console.error("Failed to load models", err);
       }
     };
-    loadModel();
+    initializeModels();
   }, []);
 
-  // 2. Setup Camera AND Cleanup on Unmount
+  // 2. Setup Low-Resolution Camera (Faster Processing)
   useEffect(() => {
-    // Keep a reference to the active stream so we can shut it down later
     let activeStream: MediaStream | null = null;
 
     async function setupCamera() {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: 224, height: 224 }, 
+            video: { width: 320, height: 240 }, // Keeps CPU load very low
             audio: false,
           });
-          
-          activeStream = stream; // Save the stream to our variable
+          activeStream = stream; 
           
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
             setIsCameraReady(true);
           }
         } catch (err) {
-          toast.error("Camera access is required.");
+          toast.error("Camera access is required for proctoring.");
         }
       }
     }
     setupCamera();
 
-    // 👉 THE FIX: React runs this return function when the component unmounts
-    // (e.g., when the user gets kicked to the dashboard for switching tabs)
     return () => {
       if (activeStream) {
-        console.log("Shutting down camera hardware...");
         activeStream.getTracks().forEach(track => track.stop());
       }
     };
   }, []);
 
-  // 3. AI Detection Loop
+  // 3. High-Speed, Lightweight Detection Loop
   useEffect(() => {
-    if (!model || !isCameraReady) return;
+    if (!objectDetector || !faceLandmarker || !isCameraReady || !videoRef.current) return;
 
-    const interval = setInterval(async () => {
-      if (hasViolated.current || !videoRef.current) return;
+    const video = videoRef.current;
+    let animationFrameId: number;
+    let lastVideoTime = -1;
 
-      try {
-        const predictions = await model.detect(videoRef.current);
-        const phoneDetected = predictions.find(p => p.class === "cell phone");
+    const predict = async () => {
+      if (hasViolated.current) return;
 
+      if (video.currentTime !== lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        const startTimeMs = performance.now();
+
+        // --- RULE 1: NO PHONES ---
+        const objResults = objectDetector.detectForVideo(video, startTimeMs);
+        const phoneDetected = objResults.detections.find(d => d.categories[0].categoryName === "cell phone");
+        
         if (phoneDetected) {
-          hasViolated.current = true;
-          toast.error("Mobile device detected! Session terminated.");
-          
-          if (document.fullscreenElement) {
-            document.exitFullscreen().catch(() => {});
-          }
-          
-          // Note: We don't necessarily need to manually stop the stream here anymore
-          // because navigating away will unmount the component and trigger the cleanup above!
-          setTimeout(() => {
-            navigate("/dashboard");
-          }, 100); 
+          triggerTermination("Mobile device detected!");
+          return;
         }
-      } catch (error) {
-        console.error("Prediction error:", error);
-      }
-    }, 1500);
 
-    return () => clearInterval(interval);
-  }, [model, isCameraReady, navigate]);
+        // --- FACE TRACKING RULES ---
+        const faceResults = faceLandmarker.detectForVideo(video, startTimeMs);
+        const faceCount = faceResults.faceLandmarks ? faceResults.faceLandmarks.length : 0;
+
+        // RULE 2: NO FRIENDS (Multiple People)
+        if (faceCount > 1) {
+          triggerTermination("Multiple people detected in the frame!");
+          return;
+        }
+
+        // RULE 3: STAY IN YOUR SEAT (Face Missing)
+        if (faceCount === 0) {
+          const now = Date.now();
+          if (now - lastStrikeTime.current > 5000) { // 5-second grace period
+            missingStrikes.current += 1;
+            lastStrikeTime.current = now;
+
+            if (missingStrikes.current === 1) {
+              toast.warning("Warning 1: Face not detected! Please stay in your seat.");
+            } else if (missingStrikes.current === 2) {
+              toast.warning("Warning 2: Please return to the frame. Final warning.");
+            } else if (missingStrikes.current >= 3) {
+              triggerTermination("Exam Terminated: User left the testing area.");
+              return;
+            }
+          }
+        } else {
+          // Reset strikes if they are sitting normally in frame for a while
+          // (Optional: You can remove this if you want strikes to be permanent)
+          if (Date.now() - lastStrikeTime.current > 10000) {
+             missingStrikes.current = 0;
+          }
+        }
+      }
+      
+      // Syncs perfectly with the browser's refresh rate
+      animationFrameId = requestAnimationFrame(predict);
+    };
+
+    predict();
+
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [objectDetector, faceLandmarker, isCameraReady, navigate]);
+
+  // --- TERMINATION HANDLER ---
+  const triggerTermination = (message: string) => {
+    hasViolated.current = true;
+    toast.error(message);
+    
+    // Exit Fullscreen
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+    
+    // Kill Camera hardware
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+    }
+
+    // Instant Redirect
+    setTimeout(() => {
+      navigate("/dashboard");
+    }, 100);
+  };
 
   return (
     <div className="fixed bottom-4 right-4 z-[200]">
