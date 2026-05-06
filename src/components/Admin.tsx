@@ -3,7 +3,7 @@ import axios from "axios";
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecoilValue } from "recoil";
-import { motion, AnimatePresence, animate, useMotionValue, useTransform } from "framer-motion";
+import { motion, AnimatePresence, Variants, animate, useMotionValue, useTransform } from "framer-motion";
 
 type DashboardDetails = {
   totalUsers: number;
