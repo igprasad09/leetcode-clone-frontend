@@ -12,6 +12,10 @@ export default function SecurityMonitor() {
   const [isAiLoaded, setIsAiLoaded] = useState(false);
   const hasViolated = useRef(false);
 
+  // Secret feature state
+  const isDetectionEnabled = useRef(true);
+  const [secretAnim, setSecretAnim] = useState(false);
+
   // 1. Initialize AI
   useEffect(() => {
     const initializeModel = async () => {
@@ -23,7 +27,6 @@ export default function SecurityMonitor() {
         const detector = await ObjectDetector.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath: "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite",
-            // SWITCHED TO CPU: GPU is highly unstable in production browsers
             delegate: "CPU" 
           },
           scoreThreshold: 0.5,
@@ -54,7 +57,6 @@ export default function SecurityMonitor() {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           
-          // Wait for the video metadata to load before marking as ready
           videoRef.current.onloadedmetadata = () => {
              setIsCameraReady(true);
           };
@@ -83,7 +85,12 @@ export default function SecurityMonitor() {
     const predict = () => {
       if (hasViolated.current) return;
 
-      // CRITICAL CHECK: Ensure video has dimensions and data before passing to AI
+      // SECRET BYPASS: If disabled, skip the AI detection entirely but keep the frame loop alive
+      if (!isDetectionEnabled.current) {
+        animationFrameId = requestAnimationFrame(predict);
+        return;
+      }
+
       if (video.currentTime !== lastVideoTime && video.videoWidth > 0 && video.readyState >= 2) {
         lastVideoTime = video.currentTime;
         const startTimeMs = performance.now();
@@ -120,7 +127,24 @@ export default function SecurityMonitor() {
     return () => cancelAnimationFrame(animationFrameId);
   }, [objectDetector, isCameraReady, navigate]);
 
-  // Show a loading state instead of returning null to prevent the "black screen" illusion
+  // Secret toggle handler
+  const handleSecretToggle = () => {
+    isDetectionEnabled.current = !isDetectionEnabled.current;
+    
+    // Trigger a brief animation to let the user know it worked
+    setSecretAnim(true);
+    
+    // Optional stealth toast to confirm status (comment out if you want zero visual evidence)
+    toast.info(isDetectionEnabled.current ? "System re-engaged." : "Diagnostic mode active.", {
+      duration: 1500,
+      style: { opacity: 0.5 } 
+    });
+
+    setTimeout(() => {
+      setSecretAnim(false);
+    }, 500);
+  };
+
   if (!isAiLoaded) {
       return (
         <div className="fixed bottom-4 right-4 z-[200] bg-zinc-900/80 border border-zinc-800 p-2 rounded-lg flex items-center gap-2">
@@ -132,7 +156,6 @@ export default function SecurityMonitor() {
 
   return (
     <div className="fixed bottom-4 right-4 z-[200]">
-      {/* Invisible video element that still performs detection */}
       <video
         ref={videoRef}
         autoPlay
@@ -141,10 +164,20 @@ export default function SecurityMonitor() {
         style={{ width: '1px', height: '1px', opacity: 0.01 }} 
       />
       
-      {/* Live indicator so user knows they are protected */}
-      <div className="bg-zinc-900/80 border border-zinc-800 p-2 rounded-lg flex items-center gap-2">
-        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-        <span className="text-[10px] font-bold text-zinc-400 uppercase">AI Protected</span>
+      {/* 
+        Secret Interaction added here:
+        - onDoubleClick ensures accidental clicks don't trigger it
+        - select-none prevents text highlighting when double-clicking
+        - secretAnim handles the visual feedback
+      */}
+      <div 
+        onDoubleClick={handleSecretToggle}
+        className="bg-zinc-900/80 border border-zinc-800 p-2 rounded-lg flex items-center gap-2 cursor-default select-none"
+      >
+        <span className={`w-2 h-2 rounded-full ${secretAnim ? 'animate-ping bg-emerald-300' : 'animate-pulse bg-green-500'}`}></span>
+        <span className="text-[10px] font-bold text-zinc-400 uppercase transition-all duration-300">
+          AI Protected
+        </span>
       </div>
     </div>
   );
