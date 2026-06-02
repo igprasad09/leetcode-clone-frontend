@@ -633,9 +633,9 @@ export default function Admin() {
                           className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 flex items-center justify-between group"
                         >
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-lg border border-zinc-700/50 bg-zinc-800/50 flex items-center justify-center font-bold text-zinc-300 shadow-inner group-hover:bg-zinc-700 transition-colors">
-                              {program.title ? program.title[0] : "P"}
-                            </div>
+                          <div className="w-12 h-12 rounded-lg border border-zinc-700/50 bg-zinc-800/50 flex items-center justify-center font-bold text-zinc-300 shadow-inner group-hover:bg-zinc-700 transition-colors">
+                            {program.title ? (program.title.match(/^\d+/)?.[0] || program.title[0]) : "P"}
+                          </div>
                             <div>
                               <p className="font-semibold text-zinc-200 text-lg">{program.title ? program.title.replace(/^\d+\.\s*/, "") : "Unknown"}</p>
                               <div className="flex items-center gap-2 mt-1">
