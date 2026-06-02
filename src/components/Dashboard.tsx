@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Navbar from "./Navbar";
 import { TypewriterEffect } from "./ui/typewriter-effect";
 import {
@@ -23,6 +23,10 @@ export default function Dashboard() {
   const [videoUrl, setVideoUrl] = useState("");
   const [submitoins, setSubmitions] = useRecoilState(submitionAtom);
   const [loading, setLoading] = useState(true);
+  
+  // Filtering States
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedDifficulty, setSelectedDifficulty] = useState("All");
 
   // 1. Fetch all programs
   useEffect(() => {
@@ -47,11 +51,49 @@ export default function Dashboard() {
     }
   }, [email, setSubmitions]);
 
+  // Extract unique categories
+  const categories = useMemo(() => {
+    if (!allprograms) return ["All"];
+    const cats = new Set(
+      allprograms.map((p: any) => 
+        p.category ? p.category.trim().toLowerCase() : "uncategorized"
+      )
+    );
+    return ["All", ...Array.from(cats)];
+  }, [allprograms]);
+
+  // Extract unique difficulties (handles DB variations like 'Meadiam')
+  const difficulties = useMemo(() => {
+    if (!allprograms) return ["All"];
+    const diffs = new Set(
+      allprograms.map((p: any) => 
+        p.difficulty ? p.difficulty.trim().toLowerCase() : "unknown"
+      )
+    );
+    // Optional: Sort them logically if you want (Easy -> Medium -> Hard)
+    return ["All", ...Array.from(diffs)];
+  }, [allprograms]);
+
+  // Filter programs based on BOTH Category and Difficulty
+  const filteredPrograms = useMemo(() => {
+    if (!allprograms) return [];
+    
+    return allprograms.filter((p: any) => {
+      const cat = p.category ? p.category.trim().toLowerCase() : "uncategorized";
+      const diff = p.difficulty ? p.difficulty.trim().toLowerCase() : "unknown";
+      
+      const matchesCategory = selectedCategory === "All" || cat === selectedCategory;
+      const matchesDifficulty = selectedDifficulty === "All" || diff === selectedDifficulty;
+
+      return matchesCategory && matchesDifficulty;
+    });
+  }, [allprograms, selectedCategory, selectedDifficulty]);
+
+
   // Handle Video Modal Open
   function handle_videoOpen(url: string) {
     let videoId = "";
 
-    // Extract video ID from different YouTube URL formats
     if (url.includes("watch?v=")) {
       videoId = url.split("watch?v=")[1].split("&")[0];
     } else if (url.includes("youtu.be/")) {
@@ -63,120 +105,187 @@ export default function Dashboard() {
     setOpenVideo(true);
   }
 
-  // Handle Video Modal Close
   function handleClose() {
-    // Add a slight delay before unmounting to allow a closing animation if you wanted to add one later
     setOpenVideo(false);
     setVideoUrl("");
   }
 
   return (
     <div className="bg-zinc-900 text-white min-h-screen overflow-x-hidden">
-      <Navbar clock={false} />
+      
+      {/* ── Fixed Sticky Navbar ── */}
+      <div className="sticky top-0 z-50 w-full bg-zinc-900/80 backdrop-blur-md border-b border-zinc-800">
+        <Navbar clock={false} />
+      </div>
 
-      {/* Title with typewriter effect */}
       <TypewriterEffect words={words} className="mt-6 sm:mt-10" />
 
-      {/* Main container for the responsive table */}
-      <div className="flex justify-center mt-10 px-4 pb-10">
-        <div className="w-full max-w-4xl overflow-x-auto rounded-xl border border-zinc-700/50 shadow-2xl bg-zinc-900/50 backdrop-blur-sm animate-fade-in-up">
-          <table className="w-full border-collapse text-left text-sm">
-            <thead className="text-zinc-400 uppercase border-b border-zinc-700 bg-zinc-900 sticky top-0 z-10">
-              <tr>
-                <th className="p-4 font-semibold tracking-wider">Status</th>
-                <th className="p-4 font-semibold tracking-wider">Title</th>
-                <th className="p-4 font-semibold tracking-wider">Difficulty</th>
-                <th className="p-4 font-semibold tracking-wider">Category</th>
-                <th className="p-4 font-semibold tracking-wider text-center">Solution</th>
-              </tr>
-            </thead>
+      <div className="flex flex-col items-center mt-10 px-4 pb-10">
+        <div className="w-full max-w-4xl">
+          
+          {/* ── Dynamic Filters ── */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-4 px-1 animate-fade-in-up">
+            <h2 className="text-lg font-semibold text-zinc-200 whitespace-nowrap">
+              Problem Set <span className="text-zinc-500 text-sm font-normal ml-1">({filteredPrograms.length})</span>
+            </h2>
+            
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Category Filter */}
+              <div className="flex items-center gap-2">
+                <label htmlFor="category-filter" className="text-sm text-zinc-400 font-medium">
+                  Category:
+                </label>
+                <select
+                  id="category-filter"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="bg-zinc-950/50 border border-zinc-700 text-zinc-200 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none block p-2 transition-all duration-300 capitalize cursor-pointer shadow-inner hover:bg-zinc-800"
+                >
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat} className="capitalize bg-zinc-900">
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <tbody className="text-zinc-200 divide-y divide-zinc-800/50">
-              {loading ? (
-                // Skeleton Loading State
-                Array.from({ length: 5 }).map((_, idx) => (
-                  <tr key={idx} className="bg-zinc-800/20 animate-pulse">
-                    <td className="p-4"><div className="h-6 w-6 bg-zinc-700 rounded-full"></div></td>
-                    <td className="p-4"><div className="h-5 bg-zinc-700 rounded w-48"></div></td>
-                    <td className="p-4"><div className="h-5 bg-zinc-700 rounded w-16"></div></td>
-                    <td className="p-4"><div className="h-5 bg-zinc-700 rounded w-24"></div></td>
-                    <td className="p-4 flex justify-center"><div className="h-8 w-12 bg-zinc-700 rounded-lg"></div></td>
-                  </tr>
-                ))
-              ) : (
-                // Actual Data Rows
-                allprograms && allprograms.map((element, index) => (
-                  <tr 
-                    key={index} 
-                    className="group hover:bg-zinc-800/80 transition-all duration-300 cursor-pointer animate-slide-in-row opacity-0"
-                    style={{ animationDelay: `${index * 0.05}s` }}
-                  >
-                    <td className="p-4">
-                      {submitoins?.find(el => el == index + 1) ? (
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-500/10 animate-scale-in">
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-5 h-5 text-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.5)]">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      ) : (
-                        <div className="w-8 h-8 flex items-center justify-center text-zinc-600">-</div>
-                      )}
-                    </td>
-                    <td 
-                      onClick={() => navigate(`/program/${element.id}`)} 
-                      className="p-4 font-medium group-hover:text-white transition-colors"
-                    >
-                      {element.title}
-                    </td>
-                    <td className="p-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold tracking-wide 
-                        ${element.difficulty.toLowerCase() === 'easy' ? 'text-green-400 bg-green-400/10' : 
-                          element.difficulty.toLowerCase() === 'medium' ? 'text-yellow-400 bg-yellow-400/10' : 
-                          'text-red-400 bg-red-400/10'}`}>
-                        {element.difficulty}
-                      </span>
-                    </td>
-                    <td className="p-4 text-zinc-400 group-hover:text-zinc-300 transition-colors">
-                      {element.category}
-                    </td>
-                    <td className="p-4 flex justify-center">
-                      <svg 
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent row click if they click the video
-                          handle_videoOpen(element.solutionlink);
-                        }} 
-                        className="cursor-pointer w-9 h-auto opacity-70 group-hover:opacity-100 hover:scale-110 hover:drop-shadow-[0_0_10px_rgba(205,32,31,0.6)] transition-all duration-300 active:scale-95" 
-                        xmlns="http://www.w3.org/2000/svg" width="2500" height="1756" viewBox="5.368 13.434 53.9 37.855" id="youtube"
+              {/* Difficulty Filter */}
+              <div className="flex items-center gap-2">
+                <label htmlFor="difficulty-filter" className="text-sm text-zinc-400 font-medium">
+                  Difficulty:
+                </label>
+                <select
+                  id="difficulty-filter"
+                  value={selectedDifficulty}
+                  onChange={(e) => setSelectedDifficulty(e.target.value)}
+                  className="bg-zinc-950/50 border border-zinc-700 text-zinc-200 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none block p-2 transition-all duration-300 capitalize cursor-pointer shadow-inner hover:bg-zinc-800"
+                >
+                  {difficulties.map((diff) => (
+                    <option key={diff} value={diff} className="capitalize bg-zinc-900">
+                      {/* Clean up typos for UI display, but keep original value for logic */}
+                      {diff === "meadiam" ? "Medium" : diff} 
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full overflow-x-auto rounded-xl border border-zinc-700/50 shadow-2xl bg-zinc-900/50 backdrop-blur-sm animate-fade-in-up">
+            <table className="w-full border-collapse text-left text-sm">
+              <thead className="text-zinc-400 uppercase border-b border-zinc-700 bg-zinc-900 sticky top-0 z-10">
+                <tr>
+                  <th className="p-4 font-semibold tracking-wider">Status</th>
+                  <th className="p-4 font-semibold tracking-wider">Title</th>
+                  <th className="p-4 font-semibold tracking-wider">Difficulty</th>
+                  <th className="p-4 font-semibold tracking-wider">Category</th>
+                  <th className="p-4 font-semibold tracking-wider text-center">Solution</th>
+                </tr>
+              </thead>
+
+              <tbody className="text-zinc-200 divide-y divide-zinc-800/50">
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, idx) => (
+                    <tr key={idx} className="bg-zinc-800/20 animate-pulse">
+                      <td className="p-4"><div className="h-6 w-6 bg-zinc-700 rounded-full"></div></td>
+                      <td className="p-4"><div className="h-5 bg-zinc-700 rounded w-48"></div></td>
+                      <td className="p-4"><div className="h-5 bg-zinc-700 rounded w-16"></div></td>
+                      <td className="p-4"><div className="h-5 bg-zinc-700 rounded w-24"></div></td>
+                      <td className="p-4 flex justify-center"><div className="h-8 w-12 bg-zinc-700 rounded-lg"></div></td>
+                    </tr>
+                  ))
+                ) : filteredPrograms.length === 0 ? (
+                   <tr>
+                     <td colSpan={5} className="p-8 text-center text-zinc-500">
+                       No problems match your selected filters.
+                     </td>
+                   </tr>
+                ) : (
+                  filteredPrograms.map((element: any, index: number) => {
+                    // Standardize difficulty string for tag coloring
+                    const diffTag = element.difficulty?.toLowerCase().trim();
+                    const isEasy = diffTag === 'easy';
+                    const isMedium = diffTag === 'medium' || diffTag === 'meadiam';
+                    const isHard = diffTag === 'hard';
+
+                    return (
+                      <tr 
+                        key={element.id || index} 
+                        className="group hover:bg-zinc-800/80 transition-all duration-300 cursor-pointer animate-slide-in-row opacity-0"
+                        style={{ animationDelay: `${index * 0.05}s` }}
                       >
-                        <path fill="#FFF" d="M41.272 31.81c-4.942-2.641-9.674-5.069-14.511-7.604v15.165c5.09-2.767 10.455-5.301 14.532-7.561h-.021z"></path>
-                        <path fill="#E8E0E0" d="M41.272 31.81c-4.942-2.641-14.511-7.604-14.511-7.604l12.758 8.575c.001 0-2.324 1.289 1.753-.971z"></path>
-                        <path fill="#CD201F" d="M27.691 51.242c-10.265-.189-13.771-.359-15.926-.803-1.458-.295-2.725-.95-3.654-1.9-.718-.719-1.289-1.816-1.732-3.338-.38-1.268-.528-2.323-.739-4.9-.323-5.816-.4-10.571 0-15.884.33-2.934.49-6.417 2.682-8.449 1.035-.951 2.239-1.563 3.591-1.816 2.112-.401 11.11-.718 20.425-.718 9.294 0 18.312.317 20.426.718 1.689.317 3.273 1.267 4.203 2.492 2 3.146 2.035 7.058 2.238 10.118.084 1.458.084 9.737 0 11.195-.316 4.836-.57 6.547-1.288 8.321-.444 1.12-.823 1.711-1.479 2.366a7.085 7.085 0 0 1-3.76 1.922c-8.883.668-16.426.813-24.987.676zM41.294 31.81c-4.942-2.641-9.674-5.09-14.511-7.625v15.166c5.09-2.767 10.456-5.302 14.532-7.562l-.021.021z"></path>
-                      </svg>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                        <td className="p-4">
+                          {submitoins?.find(el => el == element.id) ? (
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-500/10 animate-scale-in">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-5 h-5 text-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.5)]">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          ) : (
+                            <div className="w-8 h-8 flex items-center justify-center text-zinc-600">-</div>
+                          )}
+                        </td>
+                        <td 
+                          onClick={() => navigate(`/program/${element.id}`)} 
+                          className="p-4 font-medium group-hover:text-white transition-colors"
+                        >
+                          {element.title}
+                        </td>
+                        <td className="p-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold tracking-wide 
+                            ${isEasy ? 'text-green-400 bg-green-400/10' : 
+                              isMedium ? 'text-yellow-400 bg-yellow-400/10' : 
+                              isHard ? 'text-red-400 bg-red-400/10' : 
+                              'text-zinc-400 bg-zinc-400/10'}`}>
+                            {isMedium ? 'Medium' : (element.difficulty || 'Unknown')}
+                          </span>
+                        </td>
+                        <td className="p-4 text-zinc-400 group-hover:text-zinc-300 transition-colors capitalize">
+                          {element.category || 'Uncategorized'}
+                        </td>
+                        <td className="p-4 flex justify-center">
+                          <svg 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if(element.solutionlink) {
+                                handle_videoOpen(element.solutionlink);
+                              }
+                            }} 
+                            className={`w-9 h-auto transition-all duration-300 active:scale-95 ${
+                              element.solutionlink 
+                              ? "cursor-pointer opacity-70 group-hover:opacity-100 hover:scale-110 hover:drop-shadow-[0_0_10px_rgba(205,32,31,0.6)]" 
+                              : "opacity-20 cursor-not-allowed"
+                            }`}
+                            xmlns="http://www.w3.org/2000/svg" width="2500" height="1756" viewBox="5.368 13.434 53.9 37.855" id="youtube"
+                          >
+                            <path fill="#FFF" d="M41.272 31.81c-4.942-2.641-9.674-5.069-14.511-7.604v15.165c5.09-2.767 10.455-5.301 14.532-7.561h-.021z"></path>
+                            <path fill="#E8E0E0" d="M41.272 31.81c-4.942-2.641-14.511-7.604-14.511-7.604l12.758 8.575c.001 0-2.324 1.289 1.753-.971z"></path>
+                            <path fill="#CD201F" d="M27.691 51.242c-10.265-.189-13.771-.359-15.926-.803-1.458-.295-2.725-.95-3.654-1.9-.718-.719-1.289-1.816-1.732-3.338-.38-1.268-.528-2.323-.739-4.9-.323-5.816-.4-10.571 0-15.884.33-2.934.49-6.417 2.682-8.449 1.035-.951 2.239-1.563 3.591-1.816 2.112-.401 11.11-.718 20.425-.718 9.294 0 18.312.317 20.426.718 1.689.317 3.273 1.267 4.203 2.492 2 3.146 2.035 7.058 2.238 10.118.084 1.458.084 9.737 0 11.195-.316 4.836-.57 6.547-1.288 8.321-.444 1.12-.823 1.711-1.479 2.366a7.085 7.085 0 0 1-3.76 1.922c-8.883.668-16.426.813-24.987.676zM41.294 31.81c-4.942-2.641-9.674-5.09-14.511-7.625v15.166c5.09-2.767 10.456-5.302 14.532-7.562l-.021.021z"></path>
+                          </svg>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       {/* Popup Modal */}
       {openVideo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Animated Backdrop */}
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
             onClick={handleClose}
           />
-          
-          {/* Animated Modal Content */}
-          <div className="relative bg-zinc-800 border border-zinc-700 rounded-2xl shadow-2xl p-4 w-full max-w-4xl animate-modal-pop">
+          <div className="relative bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-4 w-full max-w-4xl animate-modal-pop">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-zinc-200 font-semibold ml-2">Video Solution</h3>
               <button
                 onClick={handleClose}
-                className="w-8 h-8 flex items-center justify-center bg-zinc-700/50 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 rounded-full transition-colors active:scale-90"
+                className="w-8 h-8 flex items-center justify-center bg-zinc-800 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 rounded-full transition-colors active:scale-90"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
