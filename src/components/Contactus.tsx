@@ -20,23 +20,11 @@ import TwitterBtn from "./ui/TwitterBtn";
 export default function Contactus() {
     const testimonials = [
    {
-    quote: "Professor | Computer Science & Cybersecurity Expert | Academic Mentor | Project Guide",
-    name: "Professor Mantesh Patil",
-    designation: "Project Guide & Professor",
-    src: "/user3.jpeg",
-   },
-   {
     quote: "MERN Stack Developer | React & Node.js | DSA Enthusiast | 2× Coding Competition Winner at SNJPSNMS College | Runner-Up at Engineering College",
     name: "Prasad Kamble",
-    designation: "Backend Developer",
+    designation: "Full-Stack Developer",
     src: "/user1.jpeg",
-  },
-  {
-    quote: "React Developer | Python Programmer | Runner-Up in Engineering College Coding Competition",
-    name: "Sameer Sayyad",
-    designation: "Frontend Developer",
-    src: "/user2.jpg",
-  },
+  }
 ];
   const placeholders = [
   "Search coding problems...",
